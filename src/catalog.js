@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const { pool } = require('./db');
 const { writeAudit } = require('./audit');
-const { authenticate, filterAccessible, requireRole, authorizeEntry } = require('./access');
+const { authenticate, requirePasswordChangeComplete, filterAccessible, requireRole, authorizeEntry } = require('./access');
 const { cleanName } = require('./file-names');
 
 const router = express.Router();
@@ -56,7 +56,7 @@ const entityConfig = {
   }
 };
 
-router.use(authenticate);
+router.use(authenticate, requirePasswordChangeComplete);
 
 router.get('/files', async (req, res) => {
   const { rows } = await pool.query(

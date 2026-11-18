@@ -9,7 +9,7 @@ const {execFile}=require('child_process');
 const {pathToFileURL}=require('url');
 const {pool}=require('./db');
 const {writeAudit}=require('./audit');
-const {authenticate,hasRole,authorizeEntry,filterAccessible}=require('./access');
+const {authenticate,requirePasswordChangeComplete,hasRole,authorizeEntry,filterAccessible}=require('./access');
 const {cleanName}=require('./file-names');
 const router=express.Router();
 const execFileAsync=promisify(execFile);
@@ -55,7 +55,7 @@ async function isOwnedPrivateEntry(user,entryId){
   ) SELECT 1 FROM ancestry WHERE is_private=true AND owner_user_id=$2 LIMIT 1`,[entryId,user.id]);
   return rows.length>0;
 }
-router.use(authenticate);
+router.use(authenticate,requirePasswordChangeComplete);
 router.get('/entries',async(req,res)=>{
   const parent=req.query.parent||null;
   if(parent&&!await authorizeEntry(req.user,parent,'view'))return res.status(403).json({error:'Bạn không có quyền xem thư mục này'});

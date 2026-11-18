@@ -166,6 +166,8 @@ td:first-child{color:#222}
 .profile-avatar{font-size:21px}
 .start-profile b{font-size:12px}
 .start-profile button{margin-left:auto;padding:6px 10px;border:0;border-radius:4px;background:transparent;font-size:11px}
+.start-profile #start-change-password{margin-left:auto}
+.start-profile #start-logout{margin-left:0}
 .start-profile button:hover{background:#e9e9e9}
 .context-menu{position:fixed;z-index:20;width:252px;padding:5px;border:1px solid #dedede;border-radius:7px;background:#f9f9f9f2;box-shadow:0 8px 26px #0002;backdrop-filter:blur(24px)}
 .context-menu[hidden]{display:none}
@@ -239,6 +241,14 @@ dialog h2{margin:0 0 16px;font-size:18px;font-weight:600}
 .user-active-field input{margin:0}
 .user-form-actions{grid-column:span 2;display:flex;justify-content:flex-end;gap:7px}
 .user-form-actions button{min-height:34px}
+.user-default-password{grid-column:span 2;margin:0;color:#666;font-size:11px;line-height:1.5}
+.user-default-password strong{color:#333}
+.password-change-dialog{width:min(440px,calc(100% - 28px))}
+.password-change-dialog form>label{display:grid;gap:6px;margin:13px 0;color:#4b4b4b;font-size:12px}
+.password-change-dialog input{width:100%;height:36px;padding:0 9px;border:1px solid #d5d5d5;border-radius:4px;outline-color:#0078d4}
+.password-change-dialog h2{margin-bottom:8px}
+.password-change-dialog #password-change-hint{margin:0 0 12px;color:#666;font-size:12px;line-height:1.5}
+.password-change-dialog #password-change-error{min-height:18px}
 .users-table{min-width:760px}
 .users-table td:last-child{min-width:125px}
 .users-table td:last-child button{margin-right:5px}

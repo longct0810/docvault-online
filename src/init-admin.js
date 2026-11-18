@@ -11,9 +11,9 @@ const { pool, initDb } = require('./db');
   }
   const hash = await bcrypt.hash(password, 12);
   await pool.query(
-    `INSERT INTO users(username,password_hash,role,is_admin,is_active)
-     VALUES($1,$2,'manager',true,true)
-     ON CONFLICT(username) DO UPDATE SET password_hash=EXCLUDED.password_hash,role='manager',is_admin=true,is_active=true`,
+    `INSERT INTO users(username,password_hash,role,is_admin,is_active,must_change_password)
+     VALUES($1,$2,'manager',true,true,false)
+     ON CONFLICT(username) DO UPDATE SET password_hash=EXCLUDED.password_hash,role='manager',is_admin=true,is_active=true,must_change_password=false`,
     [username, hash]
   );
   console.log(`Admin account ready: ${username}`);

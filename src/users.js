@@ -2,11 +2,12 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { pool } = require('./db');
-const { authenticate, requireAdmin } = require('./access');
+const { authenticate, requirePasswordChangeComplete, requireAdmin } = require('./access');
 const { writeAudit } = require('./audit');
 
 const router = express.Router();
-router.use(authenticate, requireAdmin);
+const defaultPassword = '123456';
+router.use(authenticate, requirePasswordChangeComplete, requireAdmin);
 
 router.get('/users', async (_req, res) => {
   const { rows } = await pool.query(
@@ -18,7 +19,6 @@ router.get('/users', async (_req, res) => {
 
 router.post('/users', async (req, res) => {
   const username = cleanText(req.body.username, 80);
-  const { password } = req.body;
   const department = cleanText(req.body.department, 120);
   const position = cleanText(req.body.position, 120);
   const role = req.body.role === undefined ? 'viewer' : req.body.role;
@@ -28,17 +28,13 @@ router.post('/users', async (req, res) => {
   if (!['viewer', 'editor', 'manager'].includes(role)) {
     return res.status(400).json({ error: 'Role không hợp lệ' });
   }
-  if (typeof password !== 'string' || password.length < 12) {
-    return res.status(400).json({ error: 'Mật khẩu phải có ít nhất 12 ký tự' });
-  }
-
-  const hash = await bcrypt.hash(password, 12);
+  const hash = await bcrypt.hash(defaultPassword, 12);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
-      `INSERT INTO users(username,password_hash,department,position,role)
-       VALUES($1,$2,$3,$4,$5)
+      `INSERT INTO users(username,password_hash,department,position,role,must_change_password)
+       VALUES($1,$2,$3,$4,$5,true)
        RETURNING id,username,department,position,role,is_admin,is_active,created_at`,
       [username, hash, department, position, role]
     );
@@ -62,7 +58,7 @@ router.post('/users', async (req, res) => {
       action: 'user_create',
       entityType: 'user',
       entityName: username,
-      details: { userId: rows[0].id, username, department, position, role, isActive: true }
+      details: { userId: rows[0].id, username, department, position, role, isActive: true, initialPassword: true }
     });
     await client.query('COMMIT');
     res.status(201).json(created[0]);
@@ -93,8 +89,12 @@ router.patch('/users/:id', async (req, res) => {
   if (requestedRole !== undefined && !['viewer', 'editor', 'manager'].includes(requestedRole)) {
     return res.status(400).json({ error: 'Role không hợp lệ' });
   }
-  if (password !== undefined && (typeof password !== 'string' || password.length < 12)) {
-    return res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 12 ký tự' });
+  if (password !== undefined && (
+    typeof password !== 'string'
+    || password.length < 12
+    || Buffer.byteLength(password, 'utf8') > 72
+  )) {
+    return res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 12 ký tự và tối đa 72 byte UTF-8' });
   }
 
   const client = await pool.connect();
@@ -128,7 +128,8 @@ router.patch('/users/:id', async (req, res) => {
     const hash = password === undefined ? null : await bcrypt.hash(password, 12);
     const { rows: updated } = await client.query(
       `UPDATE users SET username=$1,department=$2,position=$3,role=$4,is_active=$5,
-       password_hash=COALESCE($6,password_hash)
+       password_hash=COALESCE($6,password_hash),
+       must_change_password=CASE WHEN $6 IS NULL THEN must_change_password ELSE true END
        WHERE id=$7
        RETURNING id,username,department,position,role,is_admin,is_active,created_at`,
       [username, department, position, role, active, hash, userId]
@@ -167,6 +168,44 @@ router.patch('/users/:id', async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     if (error.code === '23505') return res.status(409).json({ error: 'Tên tài khoản đã tồn tại' });
+    throw error;
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/users/:id/reset-password', async (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    return res.status(400).json({ error: 'Tài khoản không hợp lệ' });
+  }
+  const hash = await bcrypt.hash(defaultPassword, 12);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT id,username FROM users WHERE id=$1 FOR UPDATE',
+      [userId]
+    );
+    if (!rows[0]) {
+      await client.query('ROLLBACK');
+      return res.sendStatus(404);
+    }
+    await client.query(
+      'UPDATE users SET password_hash=$1,must_change_password=true WHERE id=$2',
+      [hash, userId]
+    );
+    await writeAudit(client, req, {
+      action: 'user_password_reset',
+      entityType: 'user',
+      entityId: null,
+      entityName: rows[0].username,
+      details: { userId, passwordReset: true }
+    });
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (error) {
+    await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();

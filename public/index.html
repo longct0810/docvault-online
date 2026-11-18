@@ -137,7 +137,7 @@
         <button id="start-explorer"><span class="pinned-icon">📁</span><span>File Explorer</span></button>
         <button id="start-vault"><span class="pinned-icon vault-pinned">▤</span><span>IFC_Doc</span></button>
       </div>
-      <div class="start-profile"><span class="profile-avatar">👤</span><b id="start-user-name"></b><button id="start-logout">Đăng xuất</button></div>
+      <div class="start-profile"><span class="profile-avatar">👤</span><b id="start-user-name"></b><button id="start-change-password">Đổi mật khẩu</button><button id="start-logout">Đăng xuất</button></div>
     </div>
 
     <div class="taskbar">
@@ -177,7 +177,8 @@
       <form id="user-form" class="user-form">
         <input name="userId" type="hidden">
         <label>Tên tài khoản<input name="username" maxlength="80" autocomplete="off" required></label>
-        <label>Mật khẩu<input name="password" type="password" minlength="12" autocomplete="new-password"></label>
+        <label id="user-password-label" class="hidden">Đặt mật khẩu mới (không bắt buộc)<input name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password"></label>
+        <p id="user-default-password" class="user-default-password">Mật khẩu mặc định: <strong>123456</strong>. Người dùng phải đổi mật khẩu khi đăng nhập lần đầu.</p>
         <label>Phòng ban<input name="department" maxlength="120" list="department-options"></label>
         <label>Chức vụ<input name="position" maxlength="120" list="position-options"></label>
         <label>Role<select name="role"><option value="viewer">Viewer — Chỉ xem</option><option value="editor">Editor — Tạo và sửa</option><option value="manager">Manager — Tạo, sửa và xóa</option></select></label>
@@ -188,6 +189,20 @@
       <p id="users-message" class="activity-summary"></p>
       <div class="activity-table-wrap"><table class="activity-table users-table"><thead><tr><th>Tài khoản</th><th>Phòng ban</th><th>Chức vụ</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody id="users-entries"></tbody></table></div>
     </div>
+  </dialog>
+  <dialog id="password-change-dialog" class="password-change-dialog">
+    <form id="password-change-form">
+      <h2>Đổi mật khẩu</h2>
+      <p id="password-change-hint"></p>
+      <label>Mật khẩu hiện tại<input name="currentPassword" type="password" autocomplete="current-password" required></label>
+      <label>Mật khẩu mới<input name="newPassword" type="password" minlength="12" maxlength="72" autocomplete="new-password" required></label>
+      <label>Nhập lại mật khẩu mới<input name="confirmPassword" type="password" minlength="12" maxlength="72" autocomplete="new-password" required></label>
+      <p id="password-change-error" class="error" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="password-change-cancel" class="secondary" type="button">Hủy</button>
+        <button id="password-change-submit" class="primary" type="submit">Đổi mật khẩu</button>
+      </div>
+    </form>
   </dialog>
   <dialog id="permissions-dialog" class="permissions-dialog">
     <header class="activity-titlebar"><div><span aria-hidden="true">♙</span><h2>Quyền truy cập</h2></div><div><button id="permissions-close" title="Đóng" aria-label="Đóng">×</button></div></header>

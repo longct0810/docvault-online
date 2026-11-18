@@ -8,7 +8,7 @@ async function authenticate(req, res, next) {
   try {
     const token = jwt.verify(req.cookies.session, process.env.JWT_SECRET);
     const { rows } = await pool.query(
-      'SELECT id,username,department,position,role,is_admin,is_active FROM users WHERE id=$1',
+      'SELECT id,username,department,position,role,is_admin,is_active,must_change_password FROM users WHERE id=$1',
       [token.sub]
     );
     if (!rows[0]?.is_active) return res.status(401).json({ error: 'Tài khoản không hoạt động' });
@@ -20,6 +20,16 @@ async function authenticate(req, res, next) {
     }
     next(error);
   }
+}
+
+function requirePasswordChangeComplete(req, res, next) {
+  if (req.user?.must_change_password) {
+    return res.status(403).json({
+      code: 'PASSWORD_CHANGE_REQUIRED',
+      error: 'Đổi mật khẩu mặc định trước khi tiếp tục sử dụng hệ thống'
+    });
+  }
+  next();
 }
 
 function requireAdmin(req, res, next) {
@@ -111,4 +121,7 @@ async function filterAccessible(user, entries, required = 'view') {
     .map(entry => ({ ...entry, access_level: permissions.get(entry.id) }));
 }
 
-module.exports = { authenticate, requireAdmin, requireRole, hasRole, getEntryPermission, authorizeEntry, filterAccessible, can };
+module.exports = {
+  authenticate, requirePasswordChangeComplete, requireAdmin, requireRole,
+  hasRole, getEntryPermission, authorizeEntry, filterAccessible, can
+};

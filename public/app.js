@@ -19,6 +19,7 @@ let activityOffset = 0;
 let activityTotal = 0;
 let activityLoading = false;
 let currentUser = null;
+let passwordChangeForced = false;
 let permissionEntryId = null;
 let permissionData = null;
 let userRows = [];
@@ -85,6 +86,10 @@ async function request(url, options = {}) {
   if (!response.ok) {
     const data = await response.json();
     if (response.status === 401) showLogin();
+    if (data.code === 'PASSWORD_CHANGE_REQUIRED') {
+      if (currentUser) currentUser.mustChangePassword = true;
+      showPasswordChangeDialog(true);
+    }
     throw new Error(data.error || 'Có lỗi xảy ra');
   }
   return response.status === 204 ? null : response.json();
@@ -101,6 +106,11 @@ async function boot() {
     $('#nav-users').classList.toggle('hidden', !user.isAdmin);
     $('#login').classList.add('hidden');
     $('#app').classList.remove('hidden');
+    if (user.mustChangePassword) {
+      showPasswordChangeDialog(true);
+      return;
+    }
+    if ($('#password-change-dialog').open) $('#password-change-dialog').close();
     await loadFolders();
     await openFolder(null, true, false);
   } catch {
@@ -110,9 +120,56 @@ async function boot() {
 }
 
 function showLogin() {
+  currentUser = null;
+  if ($('#password-change-dialog').open) $('#password-change-dialog').close();
   $('#app').classList.add('hidden');
   $('#login').classList.remove('hidden');
 }
+
+function showPasswordChangeDialog(forced = false) {
+  passwordChangeForced = forced;
+  const form = $('#password-change-form');
+  form.reset();
+  $('#password-change-error').textContent = '';
+  $('#password-change-hint').textContent = forced
+    ? 'Tài khoản đang sử dụng mật khẩu mặc định. Hãy đổi mật khẩu để tiếp tục.'
+    : 'Nhập mật khẩu hiện tại và mật khẩu mới (ít nhất 12 ký tự).';
+  $('#password-change-cancel').classList.toggle('hidden', forced);
+  if (!$('#password-change-dialog').open) $('#password-change-dialog').showModal();
+  form.elements.currentPassword.focus();
+}
+
+$('#password-change-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const newPassword = form.elements.newPassword.value;
+  if (newPassword !== form.elements.confirmPassword.value) {
+    $('#password-change-error').textContent = 'Mật khẩu mới nhập lại không khớp';
+    return;
+  }
+  $('#password-change-error').textContent = '';
+  $('#password-change-submit').disabled = true;
+  try {
+    await request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        currentPassword: form.elements.currentPassword.value,
+        newPassword
+      })
+    });
+    if (currentUser) currentUser.mustChangePassword = false;
+    $('#password-change-dialog').close();
+    toast('Đã đổi mật khẩu thành công');
+    if (passwordChangeForced) {
+      await loadFolders();
+      await openFolder(null, true, false);
+    }
+  } catch (error) {
+    $('#password-change-error').textContent = error.message;
+  } finally {
+    $('#password-change-submit').disabled = false;
+  }
+});
 
 $('#login-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -225,6 +282,11 @@ function renderUsers() {
     edit.textContent = 'Sửa';
     edit.onclick = () => editUser(user);
     actions.append(edit);
+    const reset = document.createElement('button');
+    reset.className = 'view-all';
+    reset.textContent = 'Reset mật khẩu';
+    reset.onclick = () => resetUserPassword(user);
+    actions.append(reset);
     if (!user.is_admin) {
       const toggle = document.createElement('button');
       toggle.className = 'view-all';
@@ -244,6 +306,8 @@ function editUser(user) {
   form.elements.username.value = user.username;
   form.elements.password.value = '';
   form.elements.password.required = false;
+  $('#user-password-label').classList.remove('hidden');
+  $('#user-default-password').classList.add('hidden');
   form.elements.department.value = user.department || '';
   form.elements.position.value = user.position || '';
   form.elements.role.value = user.is_admin ? 'manager' : user.role;
@@ -259,7 +323,9 @@ function resetUserForm() {
   const form = $('#user-form');
   form.reset();
   form.elements.userId.value = '';
-  form.elements.password.required = true;
+  form.elements.password.required = false;
+  $('#user-password-label').classList.add('hidden');
+  $('#user-default-password').classList.remove('hidden');
   form.elements.role.disabled = false;
   $('.user-active-field').classList.add('hidden');
   $('#user-submit').textContent = 'Tạo tài khoản';
@@ -272,12 +338,14 @@ $('#user-form').addEventListener('submit', async event => {
   const userId = form.elements.userId.value;
   const payload = {
     username: form.elements.username.value.trim(),
-    password: form.elements.password.value || undefined,
     department: form.elements.department.value.trim(),
     position: form.elements.position.value.trim(),
     role: form.elements.role.value
   };
-  if (userId) payload.isActive = form.elements.isActive.checked;
+  if (userId) {
+    payload.isActive = form.elements.isActive.checked;
+    payload.password = form.elements.password.value || undefined;
+  }
   try {
     await request(userId ? `/admin/users/${userId}` : '/admin/users', {
       method: userId ? 'PATCH' : 'POST',
@@ -290,6 +358,20 @@ $('#user-form').addEventListener('submit', async event => {
     $('#users-message').textContent = error.message;
   }
 });
+
+async function resetUserPassword(user) {
+  if (!window.confirm(`Đặt lại mật khẩu của “${user.username}” về 123456? Người dùng sẽ phải đổi mật khẩu ở lần đăng nhập tiếp theo.`)) return;
+  try {
+    await request(`/admin/users/${user.id}/reset-password`, { method: 'POST' });
+    if (user.username === currentUser?.username) {
+      currentUser.mustChangePassword = true;
+      showPasswordChangeDialog(true);
+    }
+    toast(`Đã reset mật khẩu tài khoản “${user.username}” về 123456`);
+  } catch (error) {
+    toast(error.message);
+  }
+}
 
 function toggleUser(user) {
   const action = user.is_active ? 'vô hiệu hóa' : 'kích hoạt';
@@ -444,7 +526,9 @@ function createActivityRow(item) {
     permission_grant: 'Cấp quyền',
     permission_revoke: 'Thu hồi quyền',
     user_create: 'Tạo tài khoản',
-    user_update: 'Cập nhật tài khoản'
+    user_update: 'Cập nhật tài khoản',
+    user_password_reset: 'Đặt lại mật khẩu',
+    password_change: 'Đổi mật khẩu'
   };
   const row = document.createElement('tr');
   const values = [
@@ -468,6 +552,9 @@ function createActivityRow(item) {
 function formatActivityDetails(details = {}) {
   if (details.previousName !== undefined) return `${details.previousName} → ${details.newName}`;
   if (details.sizeBytes !== undefined) return `${details.parentName || 'Thư mục gốc'} · ${formatSize(details.sizeBytes)}${details.mimeType ? ` · ${details.mimeType}` : ''}`;
+  if (details.passwordReset) return 'Đã đặt lại về mật khẩu mặc định; yêu cầu đổi khi đăng nhập';
+  if (details.initialPassword) return 'Mật khẩu mặc định; yêu cầu đổi ở lần đăng nhập đầu tiên';
+  if (details.passwordChanged) return 'Đã đổi mật khẩu';
   if (details.sourceName) return `Từ “${details.sourceName}” đến ${details.destinationParentName || 'thư mục gốc'}`;
   if (details.previousParentName !== undefined) return `${details.previousParentName || 'Thư mục gốc'} → ${details.destinationParentName || 'Thư mục gốc'}`;
   if (details.parentName !== undefined) return `Thư mục cha: ${details.parentName || 'Thư mục gốc'}`;
@@ -862,6 +949,14 @@ $('#activity-dialog').addEventListener('click', event => {
 $('#users-close').onclick = () => $('#users-dialog').close();
 $('#users-refresh').onclick = loadUsers;
 $('#user-cancel-edit').onclick = resetUserForm;
+$('#start-change-password').onclick = () => {
+  $('#start-menu').classList.add('hidden');
+  showPasswordChangeDialog();
+};
+$('#password-change-cancel').onclick = () => $('#password-change-dialog').close();
+$('#password-change-dialog').addEventListener('cancel', event => {
+  if (passwordChangeForced) event.preventDefault();
+});
 $('#users-dialog').addEventListener('click', event => {
   if (event.target === $('#users-dialog')) $('#users-dialog').close();
 });
