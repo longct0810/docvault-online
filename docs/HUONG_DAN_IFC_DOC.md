@@ -158,11 +158,28 @@ chmod 600 .env
 mkdir -p /opt/ifc-doc/storage
 ~~~
 
+### Restore database từ file dump đi kèm
+
+Repository có dump định dạng PostgreSQL custom tại **deploy/IFC_Doc_database_20261118.dump**. Restore dump này vào database mới/rỗng sau khi clone project. Không chạy lệnh với database đang có dữ liệu cần giữ.
+
+~~~bash
+cd /opt/ifc-doc
+sudo -u postgres pg_restore \
+  --no-owner \
+  --no-privileges \
+  --role=docvault \
+  --exit-on-error \
+  --dbname=docvault \
+  /opt/ifc-doc/deploy/IFC_Doc_database_20261118.dump
+~~~
+
+Nếu gặp lỗi thiếu extension hoặc role, xem thông báo cụ thể và cài extension/tạo role mà dump yêu cầu trước khi chạy lại. Không thêm `--clean` khi chưa chủ động xác nhận muốn xóa đối tượng hiện có. Lệnh này nạp cấu trúc và dữ liệu trong dump; ứng dụng sẽ tiếp tục chạy bước khởi tạo/cập nhật schema khi khởi động.
+
 DATABASE_URL phải trỏ tới PostgreSQL độc lập. DB_PASSWORD chỉ cần khi dùng PostgreSQL trong Docker Compose. Với PM2, ecosystem.config.js lấy PORT làm cổng app (mặc định 3000); HOST_PORT chủ yếu dành cho Docker Compose. Vì vậy ví dụ này đặt PORT=6587.
 
 ### Khởi tạo tài khoản quản trị và chạy PM2
 
-Bảng và chỉ mục được khởi tạo/cập nhật khi ứng dụng khởi động. Tạo tài khoản quản trị từ cấu hình .env:
+Sau khi restore dump, chạy ứng dụng sẽ tự khởi tạo/cập nhật schema cần thiết. Tạo hoặc đồng bộ tài khoản quản trị từ cấu hình .env:
 
 ~~~bash
 node src/init-admin.js
