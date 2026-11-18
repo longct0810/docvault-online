@@ -32,17 +32,27 @@
 4. Cài dependencies: `npm install`.
 5. Khởi động ứng dụng bằng PM2: `pm2 start ecosystem.config.js` rồi `pm2 save`.
 6. Tạo tài khoản quản trị nếu chưa có: `node src/init-admin.js`.
-7. Mở `http://localhost:6587` trong máy chủ hoặc `http://<IP-public>:6587` từ bên ngoài và đăng nhập bằng `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Ứng dụng bind `0.0.0.0`; cần cho phép TCP 6587 trên firewall máy chủ và router/security group nếu có. Cổng mặc định là 6587; đặt `HOST_PORT` trong `.env` nếu muốn đổi cổng.
+7. Mở `http://localhost:6587` trong máy chủ hoặc `http://<IP-public>:6587` từ bên ngoài và đăng nhập bằng `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Ứng dụng bind `0.0.0.0`; cần cho phép TCP 6587 trên firewall máy chủ và router/security group nếu có. Cổng mặc định là 6587; đặt `HOST_PORT` trong `.env` nếu muốn đổi cổng. HTTP public không mã hóa thông tin đăng nhập; chỉ nên dùng tạm thời hoặc trên mạng tin cậy.
 
 `ecosystem.config.js` nạp `.env` và chuyển địa chỉ PostgreSQL Compose (`db:5432`) sang cổng localhost (`127.0.0.1:5433`) cho tiến trình Node chạy ngoài Docker. Khi ứng dụng khởi động, bảng nhật ký hoạt động và chỉ mục được tự tạo nếu chưa có. Để tự khởi động PM2 sau khi máy khởi động lại, chạy `pm2 startup` và thực thi lệnh mà PM2 in ra, sau đó chạy lại `pm2 save`.
 
-Đăng nhập qua HTTP public chỉ được bật tạm thời bằng `COOKIE_SECURE=false` trong `.env`; khi dùng HTTPS, xóa tùy chọn này hoặc đặt `COOKIE_SECURE=true` để cookie phiên chỉ được gửi qua kết nối mã hóa. HTTP không mã hóa mật khẩu hoặc cookie phiên và không an toàn khi dùng trên Internet.
+## Domain và HTTPS (Caddy)
+
+Cấu hình mẫu tại `deploy/Caddyfile.example` để Caddy tự lấy và gia hạn chứng chỉ TLS miễn phí. App tiếp tục chạy trực tiếp bằng HTTP ở `http://<IP-public>:6587`; đồng thời Caddy phục vụ domain qua HTTPS và địa chỉ IP qua HTTP cổng 80.
+
+1. Trỏ bản ghi DNS `A` của domain về IP public của máy chủ (và `AAAA` nếu máy chủ có IPv6). Mở TCP 80 và 443 trên firewall/security group; giữ cổng `HOST_PORT` mở nếu cần truy cập trực tiếp qua `http://<IP-public>:6587`.
+2. Cài Caddy trên máy chủ theo hướng dẫn chính thức tại [caddyserver.com/docs/install](https://caddyserver.com/docs/install).
+3. Sao chép `deploy/Caddyfile.example` thành `/etc/caddy/Caddyfile`, thay `example.com` bằng domain thật. Giữ cả hai site block: block domain bật HTTPS tự động, block `:80` giữ truy cập HTTP bằng IP. Cấu hình reverse proxy giả định ứng dụng PM2 đang lắng nghe `127.0.0.1:6587` trên cùng máy chủ.
+4. Kiểm tra cấu hình và khởi động lại Caddy: `sudo caddy validate --config /etc/caddy/Caddyfile` rồi `sudo systemctl reload caddy`.
+5. Truy cập `https://<domain>` và `http://<IP-public>`. Caddy cần DNS trỏ đúng máy chủ và có thể nhận kết nối từ Internet ở cổng 80/443 để cấp, gia hạn chứng chỉ.
+
+`COOKIE_SECURE=auto` là mặc định khuyến nghị: cookie phiên tự bật cờ `Secure` khi request đi qua HTTPS và vẫn hoạt động qua HTTP local/IP. App chỉ tin các header HTTPS do reverse proxy cùng máy chủ (loopback) gửi. Có thể đặt `COOKIE_SECURE=true` để luôn bắt buộc HTTPS hoặc `COOKIE_SECURE=false` để tắt cờ này; không nên dùng `false` khi mở app qua Internet. HTTP không mã hóa mật khẩu hoặc cookie phiên và không an toàn khi dùng trên Internet.
 
 Nếu muốn chạy toàn bộ không dùng Docker, cần cài PostgreSQL riêng và đặt `DATABASE_URL` trong `.env` trỏ tới database đó.
 
 ## Lưu ý triển khai
 
-- Đặt sau HTTPS reverse proxy (Nginx/Caddy) trước khi đưa ra Internet; không mở trực tiếp PostgreSQL.
+- Dùng domain với HTTPS trước khi đưa hệ thống ra Internet; không mở trực tiếp PostgreSQL.
 - PostgreSQL chỉ bind vào localhost port 5433; không mở cổng database ra Internet.
 - Sao lưu đồng thời thư mục `storage/` và database.
 - Tài khoản có thể xem/tải các mục chưa được phân quyền cụ thể; mục đã phân quyền chỉ hiển thị theo quyền trực tiếp hoặc quyền kế thừa phù hợp. Editor/Manager chỉ thao tác với tệp trong các thư mục họ được cấp quyền sửa; thao tác tại thư mục gốc dành cho quản trị viên hệ thống.

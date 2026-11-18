@@ -1,0 +1,8 @@
+example.com {
+    reverse_proxy 127.0.0.1:6587
+}
+
+# Keep HTTP available when visiting the server by public IP.
+:80 {
+    reverse_proxy 127.0.0.1:6587
+}

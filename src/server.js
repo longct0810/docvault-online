@@ -9,6 +9,7 @@ const users = require('./users');
 const catalog = require('./catalog');
 const { initDb } = require('./db');
 const app = express();
+app.set('trust proxy', 'loopback');
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({limit:'1mb'}));
 app.use(cookieParser());

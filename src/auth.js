@@ -5,9 +5,10 @@ const { pool } = require('./db');
 const { authenticate } = require('./access');
 const router = express.Router();
 const secret = process.env.JWT_SECRET;
-const secureCookie = process.env.COOKIE_SECURE === 'false'
-  ? false
-  : process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
+const cookieSecureSetting = process.env.COOKIE_SECURE || 'auto';
+if (!['auto', 'true', 'false'].includes(cookieSecureSetting)) {
+  throw new Error('COOKIE_SECURE must be auto, true, or false');
+}
 if (!secret || secret.length < 32) throw new Error('JWT_SECRET must contain at least 32 characters');
 router.post('/login', async (req,res)=>{
   const {username,password}=req.body||{};
@@ -15,6 +16,8 @@ router.post('/login', async (req,res)=>{
   const {rows}=await pool.query('SELECT id,username,password_hash FROM users WHERE username=$1 AND is_active=true',[username]);
   if(!rows[0] || !await bcrypt.compare(password,rows[0].password_hash)) return res.status(401).json({error:'Tên đăng nhập hoặc mật khẩu không đúng'});
   const token=jwt.sign({sub:String(rows[0].id)},secret,{expiresIn:'8h'});
+  const secureCookie = cookieSecureSetting === 'true'
+    || (cookieSecureSetting === 'auto' && req.secure);
   res.cookie('session',token,{httpOnly:true,sameSite:'lax',secure:secureCookie,maxAge:8*60*60*1000});
   res.json({username:rows[0].username});
 });
