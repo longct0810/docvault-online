@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IFC_Doc — Windows desktop</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="login" class="login-wrap hidden">
+    <form id="login-form" class="login-card">
+      <div class="brand-icon">▤</div>
+      <h1>IFC_Doc</h1>
+      <p>Đăng nhập để mở máy tính của bạn</p>
+      <div id="connection-warning" class="connection-warning hidden" role="alert">Cảnh báo: kết nối HTTP không mã hóa. Mật khẩu và phiên đăng nhập có thể bị nghe lén trên mạng. Chỉ dùng tạm thời; không đăng nhập qua Wi-Fi công cộng.</div>
+      <label>Tên đăng nhập<input name="username" autocomplete="username" required></label>
+      <label>Mật khẩu<input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary">Đăng nhập</button>
+      <div id="login-error" class="error"></div>
+    </form>
+  </div>
+
+  <div id="app" class="desktop hidden">
+    <div class="desktop-wallpaper" aria-hidden="true"></div>
+    <div class="desktop-shortcuts">
+      <button class="desktop-icon" id="desktop-pc">
+        <span class="desktop-icon-art pc-art" aria-hidden="true">▣</span>
+        <span>Máy tính này</span>
+      </button>
+      <button class="desktop-icon" id="desktop-vault">
+        <span class="desktop-icon-art folder-art" aria-hidden="true">📁</span>
+        <span>IFC_Doc</span>
+      </button>
+      <button class="desktop-icon" id="desktop-solutions" title="Mở tra cứu Giải pháp">
+        <span class="desktop-icon-art" aria-hidden="true">◇</span>
+        <span>Tra cứu Giải pháp</span>
+      </button>
+      <button class="desktop-icon" id="desktop-devices" title="Mở tra cứu Thiết bị">
+        <span class="desktop-icon-art" aria-hidden="true">▣</span>
+        <span>Tra cứu Thiết bị</span>
+      </button>
+    </div>
+
+    <section id="explorer-window" class="explorer-window" aria-label="File Explorer">
+      <header class="window-titlebar" id="window-titlebar">
+        <div class="window-app-mark" aria-hidden="true">📁</div>
+        <span class="window-title">File Explorer</span>
+        <div class="window-user"><span id="user-name"></span><button id="logout" class="user-avatar" title="Đăng xuất">👤</button></div>
+        <div class="window-controls">
+          <button id="window-minimize" aria-label="Thu nhỏ">－</button>
+          <button id="window-maximize" aria-label="Phóng to">□</button>
+          <button id="window-close" class="close-control" aria-label="Đóng">×</button>
+        </div>
+      </header>
+
+      <div class="explorer-tabs">
+        <div class="explorer-tab"><span aria-hidden="true">⌂</span> Trang chủ <button aria-label="Đóng tab">×</button></div>
+        <button id="new-tab" class="new-tab" title="Tab mới" aria-label="Tab mới">＋</button>
+      </div>
+
+      <div id="explorer-navigation" class="explorer-navigation">
+        <div class="nav-arrows"><button id="back-button" title="Quay lại" aria-label="Quay lại">‹</button><button id="forward-button" title="Tiến" aria-label="Tiến">›</button><button id="up-button" title="Lên một cấp" aria-label="Lên một cấp">↑</button><button id="refresh-button" title="Làm mới" aria-label="Làm mới">↻</button></div>
+        <div class="address-bar"><span class="address-home" aria-hidden="true">⌂</span><div id="breadcrumbs" class="breadcrumbs"></div><span class="address-chevron" aria-hidden="true">›</span></div>
+        <label class="search"><span aria-hidden="true">⌕</span><input id="search" placeholder="Tìm trong IFC_Doc" aria-label="Tìm trong IFC_Doc"></label>
+      </div>
+
+      <div id="command-bar" class="command-bar">
+        <div class="command-main">
+          <button id="new-folder" class="command-button admin-control"><span class="command-icon">＋</span><span>Mới</span><span class="command-caret">⌄</span></button>
+          <span class="command-divider"></span>
+          <button id="paste-button" class="command-button admin-control" disabled title="Chưa có mục để dán"><span class="command-icon">▣</span><span>Dán</span></button>
+          <button id="copy-button" class="command-button admin-control" disabled><span class="command-icon">▢</span><span>Sao chép</span></button>
+          <button id="cut-button" class="command-button admin-control" disabled><span class="command-icon">✂</span><span>Cắt</span></button>
+          <button id="rename-button" class="command-button admin-control" disabled><span class="command-icon">✎</span><span>Đổi tên</span></button>
+          <button id="delete-button" class="command-button admin-control danger-command" disabled><span class="command-icon">⌫</span><span>Xóa</span></button>
+        </div>
+        <div class="command-extra">
+          <label class="command-button upload-btn admin-control"><span class="command-icon">↑</span><span>Tải lên</span><input id="upload-input" type="file" multiple hidden></label>
+          <button id="sort-button" class="command-button sort-label"><span>⇅</span><span>Sắp xếp</span><select id="sort" aria-label="Sắp xếp"><option value="name">Tên</option><option value="date">Ngày sửa đổi</option><option value="size">Kích thước</option></select></button>
+          <button id="view-toggle" class="command-button" title="Đổi kiểu xem" aria-label="Đổi kiểu xem" aria-pressed="false"><span class="command-icon">▦</span><span>Xem</span></button>
+          <button id="details-toggle" class="command-button" aria-label="Bật hoặc tắt ngăn chi tiết"><span class="command-icon">▤</span><span>Chi tiết</span></button>
+        </div>
+      </div>
+
+      <div class="explorer-body">
+        <aside id="sidebar" class="explorer-sidebar">
+          <button class="nav-item active" id="nav-home"><span class="side-icon">⌂</span><span>Trang chủ</span></button>
+          <button class="nav-item" id="nav-all"><span class="side-icon">▦</span><span>Tất cả tệp</span></button>
+          <div class="side-section-title catalog-nav-title">Tra cứu danh mục</div>
+          <button class="nav-item" id="nav-solutions"><span class="side-icon">◇</span><span>Tra cứu Giải pháp</span></button>
+          <button class="nav-item" id="nav-devices"><span class="side-icon">▣</span><span>Tra cứu Thiết bị</span></button>
+          <button class="nav-item" id="nav-activity"><span class="side-icon">◷</span><span>Nhật ký hoạt động</span></button>
+          <button class="nav-item hidden" id="nav-users"><span class="side-icon">♙</span><span>Quản lý tài khoản</span></button>
+          <div class="side-section-title"><span>Truy cập nhanh</span><button id="new-folder-side" class="admin-control" title="Tạo thư mục">＋</button></div>
+          <div id="folder-tree"></div>
+          <div class="side-section-title storage-title">Máy tính này</div>
+          <button class="nav-item pc-drive" id="nav-drive"><span class="side-icon drive-icon">▰</span><span>IFC_Doc (C:)</span></button>
+          <div class="drive-meter"><span></span></div>
+          <div class="drive-caption">Lưu trữ riêng tư trên máy chủ</div>
+        </aside>
+
+        <main id="main-content" class="explorer-main">
+          <div class="content-heading">
+            <div><h1 id="folder-title">Trang chủ</h1><p id="item-count">Đang tải…</p></div>
+            <button id="home-upload" class="primary home-upload admin-control"><span>↑</span> Tải lên</button>
+          </div>
+          <section id="home-recommended" class="home-recommended">
+            <div class="section-heading"><h2>Truy cập nhanh</h2><button id="quick-view" class="view-all">Xem tất cả</button></div>
+            <div id="quick-folders" class="quick-folders"></div>
+          </section>
+          <section class="files-section">
+            <div class="section-heading files-heading"><h2 id="files-heading">Tệp gần đây</h2><div class="files-heading-actions"><span id="selection-label"></span><button id="view-toggle-secondary" class="view-all" title="Đổi kiểu xem">▦</button></div></div>
+            <div class="table-wrap">
+              <table><thead><tr><th>Tên</th><th>Ngày sửa đổi</th><th>Loại</th><th>Kích thước</th><th></th></tr></thead><tbody id="entries"></tbody></table>
+              <div id="empty" class="empty hidden"><div class="empty-icon">▤</div><b>Thư mục này đang trống</b><span>Tải tệp lên hoặc tạo thư mục mới để bắt đầu.</span><button id="empty-create" class="secondary admin-control">＋ Thư mục mới</button></div>
+            </div>
+          </section>
+          <div id="details-pane" class="details-pane hidden"><button id="details-close" aria-label="Đóng ngăn chi tiết">×</button><div class="details-art">▤</div><b id="details-name">Chọn tệp để xem chi tiết</b><span id="details-meta">Thông tin mục sẽ hiển thị tại đây</span></div>
+          <footer class="status-bar"><span id="status-count">0 mục</span><span id="status-selection"></span><span class="status-view">▤ &nbsp;▦</span></footer>
+          <section id="catalog-view" class="catalog-view hidden">
+            <header class="catalog-header">
+              <div><h1 id="catalog-title">Quản lý Giải pháp</h1><p id="catalog-count">Đang tải danh mục…</p></div>
+              <div class="catalog-actions"><label class="catalog-search"><span aria-hidden="true">⌕</span><input id="catalog-search" placeholder="Tìm trong danh mục" aria-label="Tìm trong danh mục"></label><button id="catalog-add" class="primary">＋ Thêm mới</button></div>
+            </header>
+            <div id="catalog-detail" class="catalog-detail hidden"></div>
+            <div id="catalog-items" class="catalog-items"></div>
+            <div id="catalog-empty" class="catalog-empty hidden">Chưa có mục nào trong danh mục này.</div>
+          </section>
+        </main>
+      </div>
+    </section>
+
+    <div id="start-menu" class="start-menu hidden">
+      <label class="start-search"><span>⌕</span><input id="start-search" placeholder="Tìm kiếm ứng dụng, cài đặt và tài liệu"></label>
+      <div class="start-section-head"><b>Đã ghim</b><button id="all-apps">Tất cả ứng dụng　›</button></div>
+      <div class="pinned-apps">
+        <button id="start-explorer"><span class="pinned-icon">📁</span><span>File Explorer</span></button>
+        <button id="start-vault"><span class="pinned-icon vault-pinned">▤</span><span>IFC_Doc</span></button>
+      </div>
+      <div class="start-profile"><span class="profile-avatar">👤</span><b id="start-user-name"></b><button id="start-logout">Đăng xuất</button></div>
+    </div>
+
+    <div class="taskbar">
+      <div class="taskbar-center">
+        <button id="task-start" class="task-icon start-icon" aria-label="Start"><span>⊞</span></button>
+        <button id="task-search" class="task-icon task-search" aria-label="Tìm kiếm">⌕</button>
+        <button id="task-explorer" class="task-icon explorer-task active" aria-label="File Explorer"><span>📁</span></button>
+        <button id="task-vault" class="task-icon vault-task" aria-label="IFC_Doc"><span>▤</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <div id="context-menu" class="context-menu" role="menu" aria-label="Thao tác tệp" hidden></div>
+  <dialog id="preview-dialog" class="preview-dialog">
+    <header class="preview-titlebar"><div><span aria-hidden="true">▤</span><h2 id="preview-title">Xem trước tài liệu</h2></div><div><button id="preview-download" title="Tải xuống">↓</button><button id="preview-close" title="Đóng" aria-label="Đóng">×</button></div></header>
+    <div class="preview-content"><div id="preview-loading" class="preview-loading">Đang mở tài liệu…</div><iframe id="preview-frame" title="Xem trước tài liệu" hidden></iframe></div>
+  </dialog>
+  <dialog id="catalog-image-lightbox" class="device-image-lightbox" aria-label="Xem ảnh danh mục">
+    <button id="catalog-image-lightbox-close" class="device-image-lightbox-close" type="button" aria-label="Đóng">×</button>
+    <img id="catalog-image-lightbox-photo" alt="">
+    <p id="catalog-image-lightbox-caption"></p>
+  </dialog>
+  <dialog id="activity-dialog" class="activity-dialog">
+    <header class="activity-titlebar"><div><span aria-hidden="true">◷</span><h2>Nhật ký hoạt động</h2></div><div><button id="activity-refresh" title="Làm mới">↻</button><button id="activity-close" title="Đóng" aria-label="Đóng">×</button></div></header>
+    <div class="activity-content">
+      <p id="activity-summary" class="activity-summary">Đang tải nhật ký…</p>
+      <div class="activity-table-wrap"><table class="activity-table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Hoạt động</th><th>Mục</th><th>Chi tiết</th><th>IP</th></tr></thead><tbody id="activity-entries"></tbody></table>
+        <div id="activity-empty" class="activity-empty hidden">Chưa có hoạt động nào được ghi nhận.</div>
+      </div>
+      <div class="activity-footer"><span id="activity-count"></span><button id="activity-more" class="secondary hidden">Tải thêm</button></div>
+    </div>
+  </dialog>
+  <dialog id="users-dialog" class="users-dialog">
+    <header class="activity-titlebar"><div><span aria-hidden="true">♙</span><h2>Quản lý tài khoản</h2></div><div><button id="users-refresh" title="Làm mới">↻</button><button id="users-close" title="Đóng" aria-label="Đóng">×</button></div></header>
+    <div class="activity-content users-content">
+      <form id="user-form" class="user-form">
+        <input name="userId" type="hidden">
+        <label>Tên tài khoản<input name="username" maxlength="80" autocomplete="off" required></label>
+        <label>Mật khẩu<input name="password" type="password" minlength="12" autocomplete="new-password"></label>
+        <label>Phòng ban<input name="department" maxlength="120" list="department-options"></label>
+        <label>Chức vụ<input name="position" maxlength="120" list="position-options"></label>
+        <label>Role<select name="role"><option value="viewer">Viewer — Chỉ xem</option><option value="editor">Editor — Tạo và sửa</option><option value="manager">Manager — Tạo, sửa và xóa</option></select></label>
+        <datalist id="department-options"></datalist><datalist id="position-options"></datalist>
+        <label class="user-active-field hidden"><input name="isActive" type="checkbox" checked> Tài khoản đang hoạt động</label>
+        <div class="user-form-actions"><button id="user-cancel-edit" class="secondary hidden" type="button">Hủy sửa</button><button id="user-submit" class="primary" type="submit">Tạo tài khoản</button></div>
+      </form>
+      <p id="users-message" class="activity-summary"></p>
+      <div class="activity-table-wrap"><table class="activity-table users-table"><thead><tr><th>Tài khoản</th><th>Phòng ban</th><th>Chức vụ</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody id="users-entries"></tbody></table></div>
+    </div>
+  </dialog>
+  <dialog id="permissions-dialog" class="permissions-dialog">
+    <header class="activity-titlebar"><div><span aria-hidden="true">♙</span><h2>Quyền truy cập</h2></div><div><button id="permissions-close" title="Đóng" aria-label="Đóng">×</button></div></header>
+    <div class="activity-content permissions-content">
+      <p id="permissions-summary" class="activity-summary"></p>
+      <form id="permission-form" class="permission-form">
+        <label>Áp dụng cho<select name="subjectType"><option value="user">Tài khoản</option><option value="department">Phòng ban</option><option value="position">Chức vụ</option></select></label>
+        <label id="permission-target-label">Tài khoản<select name="target" required></select></label>
+        <label>Mức quyền<select name="permission"><option value="view">Xem</option><option value="edit">Sửa</option><option value="manage">Quản lý quyền</option></select></label>
+        <button class="primary" type="submit">Cấp quyền</button>
+      </form>
+      <div class="activity-table-wrap"><table class="activity-table permission-table"><thead><tr><th>Đối tượng</th><th>Mức quyền</th><th></th></tr></thead><tbody id="permission-entries"></tbody></table>
+        <div id="permissions-empty" class="activity-empty hidden">Chưa có quyền truy cập trực tiếp. Quyền từ thư mục cha vẫn được kế thừa.</div>
+      </div>
+      <p class="activity-summary">Quyền được kế thừa xuống toàn bộ cây thư mục và được cộng dồn. Chọn “Quản lý quyền” để cho phép cấp hoặc thu hồi quyền.</p>
+    </div>
+  </dialog>
+  <dialog id="folder-dialog"><form method="dialog" id="folder-form"><h2>Tạo thư mục mới</h2><label>Tên thư mục<input name="name" maxlength="240" required></label><div class="dialog-actions"><button class="secondary" value="cancel" formnovalidate>Hủy</button><button class="primary" value="ok">Tạo thư mục</button></div></form></dialog>
+  <dialog id="rename-dialog"><form method="dialog" id="rename-form"><h2>Đổi tên</h2><label>Tên mới<input name="name" maxlength="240" required></label><div class="dialog-actions"><button class="secondary" value="cancel" formnovalidate>Hủy</button><button class="primary" value="ok">Lưu</button></div></form></dialog>
+  <dialog id="catalog-object-dialog" class="catalog-dialog">
+    <form method="dialog" id="catalog-object-form">
+      <h2 id="catalog-object-title">Thêm mới</h2>
+      <label>Tên<input name="name" maxlength="240" required></label>
+      <label id="catalog-model-field">Model<input name="model" maxlength="160"></label>
+      <label id="catalog-manufacturer-field">Nhà sản xuất<input name="manufacturer" maxlength="160"></label>
+      <label>Mô tả<textarea name="description" maxlength="4000" rows="4"></textarea></label>
+      <div class="dialog-actions"><button class="secondary" value="cancel" formnovalidate>Hủy</button><button class="primary" value="ok">Lưu</button></div>
+    </form>
+  </dialog>
+  <dialog id="catalog-document-dialog" class="catalog-dialog">
+    <form method="dialog" id="catalog-document-form">
+      <h2>Liên kết tài liệu</h2>
+      <label>Loại tài liệu<select name="category" required></select></label>
+      <label>Tệp trong IFC_Doc<select name="entryId" required></select></label>
+      <div class="dialog-actions"><button class="secondary" value="cancel" formnovalidate>Hủy</button><button class="primary" value="ok">Liên kết</button></div>
+    </form>
+  </dialog>
+  <dialog id="catalog-related-dialog" class="catalog-dialog">
+    <form method="dialog" id="catalog-related-form">
+      <h2 id="catalog-related-title">Liên kết danh mục</h2>
+      <label id="catalog-related-label">Chọn mục<select name="relatedId" required></select></label>
+      <div class="dialog-actions"><button class="secondary" value="cancel" formnovalidate>Hủy</button><button class="primary" value="ok">Liên kết</button></div>
+    </form>
+  </dialog>
+  <script src="/app.js" defer></script>
+</body>
+</html>

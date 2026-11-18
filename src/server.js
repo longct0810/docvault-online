@@ -1,0 +1,27 @@
+require('dotenv').config();
+const express = require('express');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
+const auth = require('./auth');
+const api = require('./files');
+const users = require('./users');
+const catalog = require('./catalog');
+const { initDb } = require('./db');
+const app = express();
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(express.json({limit:'1mb'}));
+app.use(cookieParser());
+app.use('/api/auth/login', rateLimit({windowMs:15*60*1000, limit:10}));
+app.use('/api/auth', auth);
+app.use('/api/admin', users);
+app.use('/api/catalog', catalog);
+app.use('/api', api);
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `Không tìm thấy API ${req.method} ${req.path}` });
+});
+app.use(express.static('public'));
+app.get('*', (_req,res)=>res.sendFile(require('path').join(process.cwd(),'public','index.html')));
+const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST || '0.0.0.0';
+initDb().then(()=>app.listen(port,host,()=>console.log(`IFC_Doc listening on ${host}:${port}`))).catch(err=>{console.error(err);process.exit(1)});

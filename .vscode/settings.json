@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^printf '%s\\\\n' '--- tools ---'; for c in docker docker-compose psql pg_isready postgres; do if command -v \"\\$c\" >/dev/null 2>&1; then printf '%s: %s\\\\n' \"\\$c\" \"\\$\\(command -v \"\\$c\"\\)\"; else printf '%s: unavailable\\\\n' \"\\$c\"; fi; done; printf '%s\\\\n' '--- docker ---'; if command -v docker >/dev/null 2>&1; then docker compose version 2>&1; docker info --format '\\{\\{\\.ServerVersion\\}\\}' 2>&1; fi; printf '%s\\\\n' '--- postgres readiness ---'; if command -v pg_isready >/dev/null 2>&1; then pg_isready -h localhost -p 5432 2>&1; else python3 -c 'import socket; s=socket\\.socket\\(\\); s\\.settimeout\\(1\\); print\\(\"localhost:5432 open\" if s\\.connect_ex\\(\\(\"127\\.0\\.0\\.1\",5432\\)\\) == 0 else \"localhost:5432 closed\"\\)'; fi; printf '%s\\\\n' '--- env keys only ---'; sed -E 's/=\\.\\*\\$/=<configured>/' \\.env$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
