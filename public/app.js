@@ -23,6 +23,7 @@ let passwordChangeForced = false;
 let permissionEntryId = null;
 let permissionData = null;
 let userRows = [];
+let userPositionsRequest = 0;
 let toastTimer;
 let catalogKind = null;
 let catalogItems = [];
@@ -31,6 +32,11 @@ let catalogObjectId = null;
 let catalogSearchTimer;
 let catalogListRequest = 0;
 let catalogDetailRequest = 0;
+let organizationType = 'departments';
+let organizationRows = [];
+let organizationEditingId = null;
+let deviceDepartmentDeviceId = null;
+let deviceDepartmentCategory = null;
 const roleRank = { viewer: 1, editor: 2, manager: 3 };
 
 function hasRole(required) {
@@ -104,6 +110,7 @@ async function boot() {
     $('#start-user-name').textContent = user.username;
     $('#nav-activity').classList.toggle('hidden', !user.isAdmin);
     $('#nav-users').classList.toggle('hidden', !user.isAdmin);
+    $('#nav-organization').classList.toggle('hidden', !hasRole('manager'));
     $('#login').classList.add('hidden');
     $('#app').classList.remove('hidden');
     if (user.mustChangePassword) {
@@ -190,6 +197,7 @@ $('#nav-home').onclick = () => openFolder(null, true);
 $('#nav-all').onclick = $('#nav-drive').onclick = () => openFolder(null, false);
 $('#nav-activity').onclick = openActivityLog;
 $('#nav-users').onclick = openUsersDialog;
+$('#nav-organization').onclick = openOrganizationDialog;
 $('#new-folder').onclick = $('#new-folder-side').onclick = () => showFolderDialog();
 $('#empty-create').onclick = showFolderDialog;
 $('#quick-view').onclick = () => openFolder(null, false);
@@ -238,12 +246,14 @@ async function openUsersDialog() {
 async function loadUsers() {
   $('#users-refresh').disabled = true;
   try {
-    userRows = await request('/admin/users');
+    const [users, departments] = await Promise.all([
+      request('/admin/users'),
+      request('/organization/departments')
+    ]);
+    userRows = users;
     renderUsers();
-    const departments = [...new Set(userRows.map(user => user.department).filter(Boolean))];
-    const positions = [...new Set(userRows.map(user => user.position).filter(Boolean))];
-    fillDatalist($('#department-options'), departments);
-    fillDatalist($('#position-options'), positions);
+    fillOrganizationSelect($('#user-form').elements.department, departments, 'Không có');
+    await loadUserPositions($('#user-form').elements.department.value);
   } catch (error) {
     $('#users-message').textContent = error.message;
   } finally {
@@ -251,14 +261,129 @@ async function loadUsers() {
   }
 }
 
-function fillDatalist(list, values) {
-  list.replaceChildren();
-  for (const value of values) {
+function fillOrganizationSelect(select, items, emptyLabel, selectedValue = select.value) {
+  select.replaceChildren();
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = emptyLabel;
+  select.append(empty);
+  for (const item of items) {
     const option = document.createElement('option');
-    option.value = value;
-    list.append(option);
+    option.value = item.name;
+    option.textContent = item.name;
+    select.append(option);
+  }
+  select.value = selectedValue;
+}
+
+async function loadUserPositions(department, selectedPosition = '') {
+  const requestId = ++userPositionsRequest;
+  const positions = await request(`/organization/positions?department=${encodeURIComponent(department)}`);
+  if (requestId !== userPositionsRequest) return;
+  fillOrganizationSelect($('#user-form').elements.position, positions, 'Không có', selectedPosition);
+}
+
+$('#user-form').elements.department.addEventListener('change', event => {
+  loadUserPositions(event.currentTarget.value).catch(error => {
+    $('#users-message').textContent = error.message;
+  });
+});
+
+async function openOrganizationDialog() {
+  $('#organization-dialog').showModal();
+  resetOrganizationForm();
+  await loadOrganizationItems();
+}
+
+async function loadOrganizationItems() {
+  const label = organizationType === 'departments' ? 'phòng ban' : 'chức vụ';
+  $('#organization-name-label').firstChild.textContent = `Tên ${label}`;
+  try {
+    organizationRows = await request(`/organization/${organizationType}`);
+    renderOrganizationItems();
+  } catch (error) {
+    $('#organization-message').textContent = error.message;
   }
 }
+
+function renderOrganizationItems() {
+  const host = $('#organization-entries');
+  host.replaceChildren();
+  for (const item of organizationRows) {
+    const row = document.createElement('div');
+    row.className = 'organization-row';
+    const name = document.createElement('strong');
+    name.textContent = item.name;
+    const actions = document.createElement('div');
+    const edit = document.createElement('button');
+    edit.className = 'view-all';
+    edit.textContent = 'Sửa';
+    edit.onclick = () => editOrganizationItem(item);
+    const remove = document.createElement('button');
+    remove.className = 'view-all';
+    remove.textContent = 'Xóa';
+    remove.onclick = () => deleteOrganizationItem(item);
+    actions.append(edit, remove);
+    row.append(name, actions);
+    host.append(row);
+  }
+  $('#organization-message').textContent = `${organizationRows.length} mục`;
+}
+
+function resetOrganizationForm() {
+  organizationEditingId = null;
+  $('#organization-form').reset();
+  $('#organization-submit').textContent = 'Thêm';
+  $('#organization-cancel-edit').classList.add('hidden');
+}
+
+function editOrganizationItem(item) {
+  organizationEditingId = item.id;
+  $('#organization-form').elements.name.value = item.name;
+  $('#organization-submit').textContent = 'Lưu thay đổi';
+  $('#organization-cancel-edit').classList.remove('hidden');
+  $('#organization-form').elements.name.focus();
+}
+
+async function deleteOrganizationItem(item) {
+  const label = organizationType === 'departments' ? 'phòng ban' : 'chức vụ';
+  if (!window.confirm(`Xóa ${label} “${item.name}”? Không thể xóa mục đang được tài khoản hoặc quyền truy cập sử dụng.`)) return;
+  try {
+    await request(`/organization/${organizationType}/${item.id}`, { method: 'DELETE' });
+    await loadOrganizationItems();
+    if ($('#users-dialog').open) await loadUsers();
+    toast(`Đã xóa ${label}`);
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+$('#organization-type').addEventListener('change', event => {
+  organizationType = event.currentTarget.value;
+  resetOrganizationForm();
+  loadOrganizationItems();
+});
+
+$('#organization-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const name = event.currentTarget.elements.name.value.trim();
+  const id = organizationEditingId;
+  try {
+    await request(`/organization/${organizationType}${id ? `/${id}` : ''}`, {
+      method: id ? 'PATCH' : 'POST',
+      body: JSON.stringify({ name })
+    });
+    resetOrganizationForm();
+    await loadOrganizationItems();
+    if ($('#users-dialog').open) await loadUsers();
+    toast(id ? 'Đã cập nhật' : 'Đã thêm');
+  } catch (error) {
+    $('#organization-message').textContent = error.message;
+  }
+});
+
+$('#organization-cancel-edit').onclick = resetOrganizationForm;
+$('#organization-close').onclick = () => $('#organization-dialog').close();
 
 function renderUsers() {
   const body = $('#users-entries');
@@ -309,7 +434,9 @@ function editUser(user) {
   $('#user-password-label').classList.remove('hidden');
   $('#user-default-password').classList.add('hidden');
   form.elements.department.value = user.department || '';
-  form.elements.position.value = user.position || '';
+  loadUserPositions(user.department || '', user.position || '').catch(error => {
+    $('#users-message').textContent = error.message;
+  });
   form.elements.role.value = user.is_admin ? 'manager' : user.role;
   form.elements.role.disabled = user.is_admin;
   form.elements.isActive.checked = user.is_active;
@@ -1498,7 +1625,8 @@ const catalogLabels = {
     singular: 'Thiết bị',
     icon: '▣',
     categories: {
-      design: 'Tài liệu thiết kế',
+      datasheet: 'Datasheet (TLKT)',
+      installation: 'Hướng dẫn lắp đặt và sử dụng',
       legal_test: 'Pháp lý / đo kiểm',
       catalog: 'Catalog thiết bị'
     }
@@ -1701,7 +1829,8 @@ function renderCatalogDetail() {
       docs,
       document => removeCatalogDocument(document),
       false,
-      input => uploadCatalogDocuments(category, input)
+      input => uploadCatalogDocuments(category, input),
+      catalogKind === 'devices' ? category : null
     ));
   }
   if (catalogKind === 'devices') {
@@ -1996,7 +2125,7 @@ function makeCatalogButton(text, handler, danger = false) {
   return button;
 }
 
-function renderCatalogSection(title, items, removeHandler, related = false, onUpload = null) {
+function renderCatalogSection(title, items, removeHandler, related = false, onUpload = null, departmentCategory = null) {
   const section = document.createElement('section');
   section.className = 'catalog-section';
   const head = document.createElement('div');
@@ -2007,6 +2136,8 @@ function renderCatalogSection(title, items, removeHandler, related = false, onUp
   heading.className = uploadAllowed ? 'catalog-section-title' : '';
   heading.textContent = title;
   head.append(heading);
+  const actions = document.createElement('div');
+  actions.className = 'catalog-section-actions';
   if (uploadAllowed) {
     const input = document.createElement('input');
     input.type = 'file';
@@ -2017,8 +2148,15 @@ function renderCatalogSection(title, items, removeHandler, related = false, onUp
     heading.onclick = () => input.click();
     const uploadButton = makeCatalogButton('↑ Tải lên', () => input.click());
     uploadButton.classList.add('catalog-upload-button');
-    head.append(uploadButton, input);
+    actions.append(uploadButton, input);
   }
+  if (departmentCategory && hasRole('manager')) {
+    const permissionButton = makeCatalogButton('♙ Phân quyền', () => openDeviceDocumentPermissions(departmentCategory));
+    permissionButton.classList.add('catalog-permission-button');
+    permissionButton.title = `Chọn phòng ban được xem ${title.toLocaleLowerCase('vi')}`;
+    actions.append(permissionButton);
+  }
+  if (actions.childElementCount) head.append(actions);
   section.append(head);
   if (!items.length) {
     const empty = document.createElement('div');
@@ -2063,6 +2201,65 @@ function renderCatalogSection(title, items, removeHandler, related = false, onUp
   }
   return section;
 }
+
+async function openDeviceDocumentPermissions(category) {
+  if (!catalogDetail || catalogKind !== 'devices') return;
+  deviceDepartmentDeviceId = catalogDetail.id;
+  deviceDepartmentCategory = category;
+  try {
+    const data = await request(`/catalog/devices/${deviceDepartmentDeviceId}/document-departments`);
+    const categoryName = catalogLabels.devices.categories[category];
+    $('#device-department-title').textContent = `Phân quyền: ${categoryName}`;
+    $('#device-department-hint').textContent =
+      'Chỉ thành viên các phòng ban đã chọn được xem tài liệu trong nhóm này. Không chọn phòng ban nào sẽ không giới hạn theo phòng ban.';
+    const host = $('#device-department-options');
+    host.replaceChildren();
+    const selected = new Set(data.permissions[category] || []);
+    for (const department of data.departments) {
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'department';
+      checkbox.value = department;
+      checkbox.checked = selected.has(department);
+      const name = document.createElement('span');
+      name.textContent = department;
+      label.append(checkbox, name);
+      host.append(label);
+    }
+    if (!data.departments.length) {
+      const empty = document.createElement('p');
+      empty.className = 'activity-summary';
+      empty.textContent = 'Chưa có phòng ban. Hãy tạo phòng ban trước khi phân quyền.';
+      host.append(empty);
+    }
+    $('#device-department-dialog').showModal();
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+$('#device-department-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (event.submitter?.value === 'cancel') {
+    $('#device-department-dialog').close();
+    return;
+  }
+  if (!deviceDepartmentDeviceId || !deviceDepartmentCategory) return;
+  const departments = [...$('#device-department-options').querySelectorAll('input:checked')]
+    .map(input => input.value);
+  try {
+    await request(
+      `/catalog/devices/${deviceDepartmentDeviceId}/document-departments/${deviceDepartmentCategory}`,
+      { method: 'PUT', body: JSON.stringify({ departments }) }
+    );
+    $('#device-department-dialog').close();
+    await openCatalogDetail(deviceDepartmentDeviceId);
+    toast('Đã cập nhật phòng ban được xem tài liệu');
+  } catch (error) {
+    toast(error.message);
+  }
+});
 
 async function uploadCatalogDocuments(category, input) {
   const files = [...input.files];

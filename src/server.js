@@ -7,6 +7,7 @@ const auth = require('./auth');
 const api = require('./files');
 const users = require('./users');
 const catalog = require('./catalog');
+const organization = require('./organization');
 const { initDb } = require('./db');
 const app = express();
 app.set('trust proxy', 'loopback');
@@ -16,6 +17,7 @@ app.use(cookieParser());
 app.use('/api/auth/login', rateLimit({windowMs:15*60*1000, limit:10}));
 app.use('/api/auth', auth);
 app.use('/api/admin', users);
+app.use('/api/organization', organization);
 app.use('/api/catalog', catalog);
 app.use('/api', api);
 app.use('/api', (req, res) => {

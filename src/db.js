@@ -54,6 +54,80 @@ async function initDb() {
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS entry_permissions_group_unique
     ON entry_permissions(entry_id,subject_type,lower(subject_value)) WHERE subject_type IN ('department','position')`);
   await pool.query('CREATE INDEX IF NOT EXISTS entry_permissions_entry_idx ON entry_permissions(entry_id)');
+  await pool.query(`CREATE TABLE IF NOT EXISTS departments (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS departments_name_unique ON departments(lower(name))');
+  await pool.query(`CREATE TABLE IF NOT EXISTS positions (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS positions_name_unique ON positions(lower(name))');
+  await pool.query(`INSERT INTO departments(name)
+    SELECT DISTINCT department FROM users WHERE department IS NOT NULL AND length(trim(department)) > 0
+    UNION
+    SELECT DISTINCT subject_value FROM entry_permissions
+      WHERE subject_type='department' AND length(trim(subject_value)) > 0
+    ON CONFLICT (lower(name)) DO NOTHING`);
+  await pool.query(`INSERT INTO positions(name)
+    SELECT DISTINCT position FROM users WHERE position IS NOT NULL AND length(trim(position)) > 0
+    UNION
+    SELECT DISTINCT subject_value FROM entry_permissions
+      WHERE subject_type='position' AND length(trim(subject_value)) > 0
+    ON CONFLICT (lower(name)) DO NOTHING`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS department_positions (
+    department_id BIGINT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+    position_id BIGINT NOT NULL REFERENCES positions(id) ON DELETE CASCADE,
+    PRIMARY KEY(department_id,position_id)
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS organization_seed_versions (
+    version INTEGER PRIMARY KEY,
+    seeded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+  const seedClient = await pool.connect();
+  try {
+    await seedClient.query('BEGIN');
+    await seedClient.query('SELECT pg_advisory_xact_lock(657587)');
+    const { rows: seeded } = await seedClient.query(
+      'SELECT 1 FROM organization_seed_versions WHERE version=1'
+    );
+    if (!seeded.length) {
+      await seedClient.query(`INSERT INTO departments(name) VALUES
+        ('Ban Giám Đốc'),('Ban Kỹ thuật'),('Kinh Doanh'),('Dự án'),('Kế toán')
+        ON CONFLICT (lower(name)) DO NOTHING`);
+      await seedClient.query(`INSERT INTO positions(name) VALUES
+        ('Giám Đốc'),('Phó Giám Đốc'),('Trưởng Ban'),('Phó Ban'),
+        ('Chuyên viên'),('Chuyên Gia'),('Trưởng Phòng'),('Phó Phòng')
+        ON CONFLICT (lower(name)) DO NOTHING`);
+      await seedClient.query(`INSERT INTO department_positions(department_id,position_id)
+        SELECT d.id,p.id FROM (VALUES
+          ('Ban Giám Đốc','Giám Đốc'),('Ban Giám Đốc','Phó Giám Đốc'),
+          ('Ban Kỹ thuật','Trưởng Ban'),('Ban Kỹ thuật','Phó Ban'),
+          ('Ban Kỹ thuật','Chuyên viên'),('Ban Kỹ thuật','Chuyên Gia'),
+          ('Kinh Doanh','Trưởng Phòng'),('Kinh Doanh','Phó Phòng'),
+          ('Kinh Doanh','Chuyên viên'),('Kinh Doanh','Chuyên Gia'),
+          ('Dự án','Trưởng Phòng'),('Dự án','Phó Phòng'),
+          ('Dự án','Chuyên viên'),('Dự án','Chuyên Gia'),
+          ('Kế toán','Trưởng Phòng'),('Kế toán','Phó Phòng'),
+          ('Kế toán','Chuyên viên'),('Kế toán','Chuyên Gia')
+        ) AS assignments(department_name,position_name)
+        JOIN departments d ON lower(d.name)=lower(assignments.department_name)
+        JOIN positions p ON lower(p.name)=lower(assignments.position_name)
+        ON CONFLICT DO NOTHING`);
+      await seedClient.query('INSERT INTO organization_seed_versions(version) VALUES(1)');
+    }
+    await seedClient.query('COMMIT');
+  } catch (error) {
+    await seedClient.query('ROLLBACK');
+    throw error;
+  } finally {
+    seedClient.release();
+  }
   await pool.query(`UPDATE entries SET is_catalog_public=false,updated_at=now()
     WHERE is_catalog_public=true AND EXISTS (
       SELECT 1 FROM entry_permissions p
@@ -112,10 +186,54 @@ async function initDb() {
   await pool.query(`CREATE TABLE IF NOT EXISTS device_documents (
     device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
     entry_id UUID NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-    category TEXT NOT NULL CHECK(category IN ('design','legal_test','catalog')),
+    category TEXT NOT NULL CONSTRAINT device_documents_category_check
+      CHECK(category IN ('datasheet','installation','legal_test','catalog')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY(device_id,entry_id,category)
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS device_document_departments (
+    device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+    category TEXT NOT NULL CONSTRAINT device_document_departments_category_check
+      CHECK(category IN ('datasheet','installation','legal_test','catalog')),
+    department TEXT NOT NULL CHECK(length(trim(department)) > 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY(device_id,category,department)
+  )`);
+  await pool.query(`DO $$
+    DECLARE constraint_row RECORD;
+    BEGIN
+      FOR constraint_row IN
+        SELECT conname,conrelid::regclass AS table_name
+        FROM pg_constraint
+        WHERE contype='c'
+          AND conrelid IN ('device_documents'::regclass, 'device_document_departments'::regclass)
+          AND pg_get_constraintdef(oid) LIKE '%design%'
+      LOOP
+        EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', constraint_row.table_name, constraint_row.conname);
+      END LOOP;
+    END $$`);
+  await pool.query("UPDATE device_documents SET category='datasheet' WHERE category='design'");
+  await pool.query("UPDATE device_document_departments SET category='datasheet' WHERE category='design'");
+  await pool.query(`DO $$ BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint
+      WHERE conname='device_documents_category_check'
+        AND conrelid='device_documents'::regclass
+    ) THEN
+      ALTER TABLE device_documents ADD CONSTRAINT device_documents_category_check
+        CHECK(category IN ('datasheet','installation','legal_test','catalog'));
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint
+      WHERE conname='device_document_departments_category_check'
+        AND conrelid='device_document_departments'::regclass
+    ) THEN
+      ALTER TABLE device_document_departments ADD CONSTRAINT device_document_departments_category_check
+        CHECK(category IN ('datasheet','installation','legal_test','catalog'));
+    END IF;
+  END $$`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS device_document_departments_unique
+    ON device_document_departments(device_id,category,lower(department))`);
   await pool.query(`CREATE TABLE IF NOT EXISTS device_images (
     id UUID PRIMARY KEY,
     device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,

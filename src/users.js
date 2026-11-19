@@ -28,6 +28,8 @@ router.post('/users', async (req, res) => {
   if (!['viewer', 'editor', 'manager'].includes(role)) {
     return res.status(400).json({ error: 'Role không hợp lệ' });
   }
+  const organizationError = await validateOrganizationValues(department, position);
+  if (organizationError) return res.status(400).json({ error: organizationError });
   const hash = await bcrypt.hash(defaultPassword, 12);
   const client = await pool.connect();
   try {
@@ -96,6 +98,8 @@ router.patch('/users/:id', async (req, res) => {
   )) {
     return res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 12 ký tự và tối đa 72 byte UTF-8' });
   }
+  const organizationError = await validateOrganizationValues(department, position);
+  if (organizationError) return res.status(400).json({ error: organizationError });
 
   const client = await pool.connect();
   try {
@@ -216,6 +220,44 @@ function cleanText(value, maxLength) {
   if (typeof value !== 'string') return null;
   const cleaned = value.trim().slice(0, maxLength);
   return cleaned || null;
+}
+
+async function validateOrganizationValues(department, position) {
+  const [departmentResult, positionResult] = await Promise.all([
+    department
+      ? pool.query('SELECT 1 FROM departments WHERE lower(name)=lower($1)', [department])
+      : null,
+    position
+      ? pool.query('SELECT 1 FROM positions WHERE lower(name)=lower($1)', [position])
+      : null
+  ]);
+  if (department && !departmentResult.rows[0]) return 'Phòng ban không tồn tại';
+  if (position && !positionResult.rows[0]) return 'Chức vụ không tồn tại';
+  if (department && position) {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM positions p
+       JOIN departments d ON lower(d.name)=lower($2)
+       WHERE lower(p.name)=lower($1)
+         AND (
+           NOT EXISTS (SELECT 1 FROM department_positions dp WHERE dp.position_id=p.id)
+           OR EXISTS (
+             SELECT 1 FROM department_positions dp
+             WHERE dp.position_id=p.id AND dp.department_id=d.id
+           )
+         )`,
+      [position, department]
+    );
+    if (!rows[0]) return 'Chức vụ không thuộc phòng ban đã chọn';
+  }
+  if (!department && position) {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM positions p WHERE lower(p.name)=lower($1)
+       AND NOT EXISTS (SELECT 1 FROM department_positions dp WHERE dp.position_id=p.id)`,
+      [position]
+    );
+    if (!rows[0]) return 'Chọn phòng ban phù hợp với chức vụ';
+  }
+  return null;
 }
 
 module.exports = router;

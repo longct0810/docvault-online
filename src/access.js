@@ -82,6 +82,17 @@ async function getPermissionMap(user, entryIds) {
     FROM (
       SELECT a.item_id,current_entry.is_catalog_public,
         MAX(CASE
+          WHEN a.item_id=a.ancestor_id AND EXISTS (
+            SELECT 1
+            FROM device_documents dd
+            JOIN device_document_departments ddd
+              ON ddd.device_id=dd.device_id AND ddd.category=dd.category
+            WHERE dd.entry_id=a.item_id
+              AND $2::text IS NOT NULL
+              AND lower(ddd.department)=lower($2)
+          ) THEN CASE $5::text
+            WHEN 'manager' THEN 3 WHEN 'editor' THEN 2 ELSE 1
+          END
           WHEN a.item_id=a.ancestor_id AND current_entry.is_catalog_public AND $5::text='manager' THEN 3
           WHEN ${permissionSql('ep')} THEN CASE ep.permission
             WHEN 'manage' THEN 3 WHEN 'edit' THEN 2 WHEN 'view' THEN 1 ELSE 0
@@ -93,7 +104,22 @@ async function getPermissionMap(user, entryIds) {
       JOIN entries current_entry ON current_entry.id=a.item_id
       LEFT JOIN entry_permissions ep ON ep.entry_id=a.ancestor_id
       GROUP BY a.item_id,current_entry.is_catalog_public
-    ) effective_permissions`,
+    ) effective_permissions
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM device_documents dd
+      JOIN device_document_departments ddd
+        ON ddd.device_id=dd.device_id AND ddd.category=dd.category
+      WHERE dd.entry_id=effective_permissions.item_id
+    ) OR EXISTS (
+      SELECT 1
+      FROM device_documents dd
+      JOIN device_document_departments ddd
+        ON ddd.device_id=dd.device_id AND ddd.category=dd.category
+      WHERE dd.entry_id=effective_permissions.item_id
+        AND $2::text IS NOT NULL
+        AND lower(ddd.department)=lower($2)
+    )`,
     [user.id, user.department, user.position, entryIds || null, user.role || 'viewer']
   );
   return new Map(rows.filter(row => row.permission).map(row => [row.item_id, row.permission]));

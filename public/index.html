@@ -91,6 +91,7 @@
           <button class="nav-item" id="nav-devices"><span class="side-icon">▣</span><span>Tra cứu Thiết bị</span></button>
           <button class="nav-item" id="nav-activity"><span class="side-icon">◷</span><span>Nhật ký hoạt động</span></button>
           <button class="nav-item hidden" id="nav-users"><span class="side-icon">♙</span><span>Quản lý tài khoản</span></button>
+          <button class="nav-item hidden" id="nav-organization"><span class="side-icon">▦</span><span>Phòng ban / chức vụ</span></button>
           <div class="side-section-title"><span>Truy cập nhanh</span><button id="new-folder-side" class="admin-control" title="Tạo thư mục">＋</button></div>
           <div id="folder-tree"></div>
           <div class="side-section-title storage-title">Máy tính này</div>
@@ -179,15 +180,26 @@
         <label>Tên tài khoản<input name="username" maxlength="80" autocomplete="off" required></label>
         <label id="user-password-label" class="hidden">Đặt mật khẩu mới (không bắt buộc)<input name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password"></label>
         <p id="user-default-password" class="user-default-password">Mật khẩu mặc định: <strong>123456</strong>. Người dùng phải đổi mật khẩu khi đăng nhập lần đầu.</p>
-        <label>Phòng ban<input name="department" maxlength="120" list="department-options"></label>
-        <label>Chức vụ<input name="position" maxlength="120" list="position-options"></label>
+        <label>Phòng ban<select name="department"><option value="">Không có</option></select></label>
+        <label>Chức vụ<select name="position"><option value="">Không có</option></select></label>
         <label>Role<select name="role"><option value="viewer">Viewer — Chỉ xem</option><option value="editor">Editor — Tạo và sửa</option><option value="manager">Manager — Tạo, sửa và xóa</option></select></label>
-        <datalist id="department-options"></datalist><datalist id="position-options"></datalist>
         <label class="user-active-field hidden"><input name="isActive" type="checkbox" checked> Tài khoản đang hoạt động</label>
         <div class="user-form-actions"><button id="user-cancel-edit" class="secondary hidden" type="button">Hủy sửa</button><button id="user-submit" class="primary" type="submit">Tạo tài khoản</button></div>
       </form>
       <p id="users-message" class="activity-summary"></p>
       <div class="activity-table-wrap"><table class="activity-table users-table"><thead><tr><th>Tài khoản</th><th>Phòng ban</th><th>Chức vụ</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody id="users-entries"></tbody></table></div>
+    </div>
+  </dialog>
+  <dialog id="organization-dialog" class="organization-dialog">
+    <header class="activity-titlebar"><div><span aria-hidden="true">▦</span><h2>Quản lý phòng ban và chức vụ</h2></div><div><button id="organization-close" title="Đóng" aria-label="Đóng">×</button></div></header>
+    <div class="activity-content organization-content">
+      <label class="organization-type-label">Danh mục<select id="organization-type"><option value="departments">Phòng ban</option><option value="positions">Chức vụ</option></select></label>
+      <form id="organization-form" class="organization-form">
+        <label id="organization-name-label">Tên phòng ban<input name="name" maxlength="120" required></label>
+        <div class="organization-actions"><button id="organization-cancel-edit" class="secondary hidden" type="button">Hủy sửa</button><button id="organization-submit" class="primary" type="submit">Thêm</button></div>
+      </form>
+      <p id="organization-message" class="activity-summary"></p>
+      <div id="organization-entries" class="organization-entries"></div>
     </div>
   </dialog>
   <dialog id="password-change-dialog" class="password-change-dialog">
@@ -245,6 +257,14 @@
       <h2 id="catalog-related-title">Liên kết danh mục</h2>
       <label id="catalog-related-label">Chọn mục<select name="relatedId" required></select></label>
       <div class="dialog-actions"><button class="secondary" value="cancel" formnovalidate>Hủy</button><button class="primary" value="ok">Liên kết</button></div>
+    </form>
+  </dialog>
+  <dialog id="device-department-dialog" class="catalog-dialog">
+    <form method="dialog" id="device-department-form">
+      <h2 id="device-department-title">Phân quyền tài liệu</h2>
+      <p id="device-department-hint" class="activity-summary"></p>
+      <div id="device-department-options" class="device-department-options"></div>
+      <div class="dialog-actions"><button class="secondary" value="cancel" formnovalidate>Hủy</button><button class="primary" value="save">Lưu</button></div>
     </form>
   </dialog>
   <script src="/app.js" defer></script>

@@ -51,7 +51,7 @@ const entityConfig = {
     title: 'thiết bị',
     documentTable: 'device_documents',
     foreignKey: 'device_id',
-    categories: ['design', 'legal_test', 'catalog'],
+    categories: ['datasheet', 'installation', 'legal_test', 'catalog'],
     fields: ['name', 'model', 'manufacturer', 'description']
   }
 };
@@ -381,6 +381,92 @@ for (const [kind, config] of Object.entries(entityConfig)) {
     }
     res.json({ ...entity, documents, related, images });
   });
+
+  if (kind === 'devices') {
+    router.get('/devices/:id/document-departments', async (req, res) => {
+      if (!requireCatalogRole(req, res, 'manager')) return;
+      if (!isUuid(req.params.id)) return res.status(400).json({ error: 'Mã thiết bị không hợp lệ' });
+      const { rows: devices } = await pool.query('SELECT id FROM devices WHERE id=$1', [req.params.id]);
+      if (!devices[0]) return res.sendStatus(404);
+      const [{ rows: departments }, { rows: grants }] = await Promise.all([
+        pool.query('SELECT name FROM departments ORDER BY lower(name)'),
+        pool.query(
+          `SELECT category,department FROM device_document_departments
+           WHERE device_id=$1 ORDER BY category,lower(department)`,
+          [req.params.id]
+        )
+      ]);
+      res.json({
+        departments: departments.map(row => row.name),
+        permissions: Object.fromEntries(config.categories.map(category => [
+          category,
+          grants.filter(grant => grant.category === category).map(grant => grant.department)
+        ]))
+      });
+    });
+
+    router.put('/devices/:id/document-departments/:category', async (req, res) => {
+      if (!requireCatalogRole(req, res, 'manager')) return;
+      const { id, category } = req.params;
+      if (!isUuid(id) || !config.categories.includes(category)) {
+        return res.status(400).json({ error: 'Thiết bị hoặc loại tài liệu không hợp lệ' });
+      }
+      const requested = req.body?.departments;
+      if (!Array.isArray(requested) || requested.some(value => typeof value !== 'string')) {
+        return res.status(400).json({ error: 'Danh sách phòng ban không hợp lệ' });
+      }
+      const uniqueNames = [...new Set(requested.map(value => value.trim().toLocaleLowerCase()))];
+      if (uniqueNames.length > 100 || uniqueNames.some(value => !value || value.length > 120)) {
+        return res.status(400).json({ error: 'Danh sách phòng ban không hợp lệ' });
+      }
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const { rows: devices } = await client.query(
+          'SELECT name FROM devices WHERE id=$1 FOR UPDATE',
+          [id]
+        );
+        if (!devices[0]) {
+          await client.query('ROLLBACK');
+          return res.sendStatus(404);
+        }
+        const { rows: departments } = await client.query(
+          `SELECT name FROM departments
+           WHERE lower(name)=ANY($1::text[])`,
+          [uniqueNames]
+        );
+        if (departments.length !== uniqueNames.length) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Một hoặc nhiều phòng ban không tồn tại' });
+        }
+        await client.query(
+          'DELETE FROM device_document_departments WHERE device_id=$1 AND category=$2',
+          [id, category]
+        );
+        for (const department of departments) {
+          await client.query(
+            `INSERT INTO device_document_departments(device_id,category,department)
+             VALUES($1,$2,$3)`,
+            [id, category, department.name]
+          );
+        }
+        await writeAudit(client, req, {
+          action: 'device_document_permission_update',
+          entityType: 'device',
+          entityId: id,
+          entityName: devices[0].name,
+          details: { category, departments: departments.map(row => row.name) }
+        });
+        await client.query('COMMIT');
+        res.json({ category, departments: departments.map(row => row.name) });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    });
+  }
 
   router.post(`/${kind}`, async (req, res) => {
     if (!requireCatalogRole(req, res, 'editor')) return;

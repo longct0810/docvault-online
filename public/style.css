@@ -232,8 +232,8 @@ dialog h2{margin:0 0 16px;font-size:18px;font-weight:600}
 .activity-empty{padding:42px 12px;color:#777;text-align:center}
 .activity-footer{flex:none;min-height:42px;display:flex;align-items:center;justify-content:space-between;color:#666;font-size:11px}
 .activity-footer button{min-height:30px}
-.users-dialog,.permissions-dialog{width:min(1120px,96vw);height:min(780px,90vh);max-width:96vw;max-height:90vh;overflow:hidden;padding:0}
-.users-dialog:not([open]),.permissions-dialog:not([open]){display:none}
+.users-dialog,.permissions-dialog,.organization-dialog{width:min(1120px,96vw);height:min(780px,90vh);max-width:96vw;max-height:90vh;overflow:hidden;padding:0}
+.users-dialog:not([open]),.permissions-dialog:not([open]),.organization-dialog:not([open]){display:none}
 .user-form{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));align-items:end;gap:10px;padding:12px;margin-bottom:12px;border:1px solid #e8e8e8;border-radius:5px;background:#fff}
 .user-form label,.permission-form label{display:grid;gap:6px;color:#4b4b4b;font-size:11px}
 .user-form input:not([type=checkbox]),.user-form select,.permission-form select{height:34px;min-width:0;padding:0 8px;border:1px solid #d5d5d5;border-radius:4px;background:white;outline-color:#0078d4}
@@ -243,6 +243,22 @@ dialog h2{margin:0 0 16px;font-size:18px;font-weight:600}
 .user-form-actions button{min-height:34px}
 .user-default-password{grid-column:span 2;margin:0;color:#666;font-size:11px;line-height:1.5}
 .user-default-password strong{color:#333}
+.organization-content{display:flex;flex-direction:column;gap:10px}
+.organization-type-label{display:grid;grid-template-columns:90px minmax(180px,300px);align-items:center;gap:10px;color:#4b4b4b;font-size:12px}
+.organization-type-label select{height:34px;padding:0 8px;border:1px solid #d5d5d5;border-radius:4px;background:white}
+.organization-form{display:grid;grid-template-columns:minmax(180px,1fr) auto;align-items:end;gap:10px;padding:12px;border:1px solid #e8e8e8;border-radius:5px;background:#fff}
+.organization-form label{display:grid;gap:6px;color:#4b4b4b;font-size:11px}
+.organization-form input{height:34px;padding:0 8px;border:1px solid #d5d5d5;border-radius:4px}
+.organization-actions{display:flex;gap:7px}
+.organization-entries{display:grid;gap:6px;overflow:auto}
+.organization-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;border:1px solid #e8e8e8;border-radius:5px;background:#fff}
+.organization-row>div{display:flex;gap:8px}
+.catalog-permission-button{min-height:28px;padding:0 9px;border:1px solid #d7dfe8;border-radius:4px;background:#fff;color:#24527a;font-size:11px}
+.catalog-section-actions{display:flex;align-items:center;gap:7px}
+.catalog-permission-button:hover{background:#f2f7fb}
+.device-department-options{display:grid;gap:8px;max-height:45vh;overflow:auto;padding:10px;border:1px solid #e8e8e8;border-radius:5px}
+.device-department-options label{display:flex;align-items:center;gap:8px;color:#333;font-size:12px}
+.device-department-options input{width:auto;min-height:auto}
 .password-change-dialog{width:min(440px,calc(100% - 28px))}
 .password-change-dialog form>label{display:grid;gap:6px;margin:13px 0;color:#4b4b4b;font-size:12px}
 .password-change-dialog input{width:100%;height:36px;padding:0 9px;border:1px solid #d5d5d5;border-radius:4px;outline-color:#0078d4}
@@ -257,7 +273,7 @@ dialog h2{margin:0 0 16px;font-size:18px;font-weight:600}
 .permission-table{min-width:480px}
 @media(max-width:900px){.explorer-window{left:10px;top:10px;width:calc(100vw - 20px);height:calc(100vh - 68px);transform:none}.explorer-sidebar{width:185px}.command-button{padding:0 6px}.command-extra .command-button>span:nth-child(2){display:none}.search{width:190px}.desktop-shortcuts{display:none}}
 @media(max-width:620px){.explorer-window{inset:0 0 48px;width:100%;height:auto;min-height:0;border-radius:0}.window-titlebar{height:38px}.window-user>span{display:none}.explorer-tabs{height:34px}.explorer-navigation{gap:5px;padding:5px 8px}.nav-arrows{gap:0}.nav-arrows button{width:25px}.search{width:34px;flex:none;padding:0 8px}.search input{width:0}.search:focus-within{position:absolute;z-index:2;right:9px;width:calc(100% - 18px)}.search:focus-within input{width:100%}.command-bar{min-height:46px;overflow:auto;padding:4px 5px}.command-button{min-width:34px;height:34px;padding:0 6px}.command-button>span:nth-child(2){display:none}.command-divider{margin:0 2px}.explorer-sidebar{width:48px;padding-inline:5px}.nav-item{justify-content:center;padding:0}.nav-item>span:not(.side-icon),.side-section-title,.tree-node span:last-child,.drive-meter,.drive-caption{display:none}.tree-node{justify-content:center;padding:0}.tree-node span:first-child{font-size:18px}.explorer-main{padding:12px 10px 0}.content-heading h1{font-size:18px}.home-upload{min-width:34px;padding:0 8px;font-size:0}.home-upload span{font-size:17px}.home-recommended{padding-bottom:10px}.quick-folders{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.quick-folder{height:40px;padding:0 6px}.quick-folder .quick-meta{display:none}.files-section{padding-top:8px}.table-wrap{margin:0 -4px}th,td{padding-inline:7px}th:nth-child(3),td:nth-child(3){display:none}th:first-child{width:60%}.details-pane{width:min(250px,85vw)}.weather-widget{width:35px}.weather-widget>span:last-child{display:none}.system-tray button{display:none}.clock{min-width:65px}.taskbar{padding:0 5px}.task-icon{width:36px}.start-menu{bottom:53px;min-height:390px;padding:18px 17px 12px}.pinned-apps{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:700px){.user-form{grid-template-columns:repeat(2,minmax(0,1fr))}.user-form .user-active-field,.user-form-actions{grid-column:span 2}.permission-form{grid-template-columns:1fr 1fr}.permission-form button{grid-column:span 2}}
+@media(max-width:700px){.user-form{grid-template-columns:repeat(2,minmax(0,1fr))}.user-form .user-active-field,.user-form-actions{grid-column:span 2}.permission-form{grid-template-columns:1fr 1fr}.permission-form button{grid-column:span 2}.organization-form{grid-template-columns:1fr}.organization-actions{justify-content:flex-end}}
 .catalog-nav-title{margin-top:8px}
 .catalog-view{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:14px}
 .catalog-header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex:none}
