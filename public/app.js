@@ -37,6 +37,7 @@ let organizationRows = [];
 let organizationEditingId = null;
 let deviceDepartmentDeviceId = null;
 let deviceDepartmentCategory = null;
+let deviceDepartmentOriginal = [];
 const roleRank = { viewer: 1, editor: 2, manager: 3 };
 
 function hasRole(required) {
@@ -368,6 +369,9 @@ $('#organization-form').addEventListener('submit', async event => {
   event.preventDefault();
   const name = event.currentTarget.elements.name.value.trim();
   const id = organizationEditingId;
+  const previous = organizationRows.find(item => item.id === id);
+  if (previous && previous.name !== name
+    && !window.confirm(`Lưu thay đổi tên ${organizationType === 'departments' ? 'phòng ban' : 'chức vụ'} từ “${previous.name}” thành “${name}”?`)) return;
   try {
     await request(`/organization/${organizationType}${id ? `/${id}` : ''}`, {
       method: id ? 'PATCH' : 'POST',
@@ -472,6 +476,16 @@ $('#user-form').addEventListener('submit', async event => {
   if (userId) {
     payload.isActive = form.elements.isActive.checked;
     payload.password = form.elements.password.value || undefined;
+    const previous = userRows.find(user => String(user.id) === String(userId));
+    const changed = previous && (
+      previous.username !== payload.username
+      || (previous.department || '') !== payload.department
+      || (previous.position || '') !== payload.position
+      || previous.role !== payload.role
+      || previous.is_active !== payload.isActive
+      || Boolean(payload.password)
+    );
+    if (changed && !window.confirm(`Lưu các thay đổi cho tài khoản “${previous.username}”?`)) return;
   }
   try {
     await request(userId ? `/admin/users/${userId}` : '/admin/users', {
@@ -580,6 +594,10 @@ function renderPermissions() {
 }
 
 async function revokePermission(grant) {
+  const subject = grant.subject_type === 'user'
+    ? grant.username
+    : `${grant.subject_type === 'department' ? 'Phòng ban' : 'Chức vụ'} “${grant.subject_value}”`;
+  if (!window.confirm(`Thu hồi quyền truy cập của ${subject}?`)) return;
   try {
     await request(`/entries/${permissionEntryId}/permissions/${grant.id}`, { method: 'DELETE' });
     await loadPermissions();
@@ -599,6 +617,11 @@ $('#permission-form').addEventListener('submit', async event => {
   const payload = { subjectType, permission: form.elements.permission.value };
   if (subjectType === 'user') payload.userId = Number(target);
   else payload.subjectValue = target;
+  const subjectName = subjectType === 'user'
+    ? permissionData.users.find(user => String(user.id) === target)?.username
+    : target;
+  const permissionName = { view: 'Xem', edit: 'Sửa', manage: 'Quản lý quyền' }[payload.permission];
+  if (!window.confirm(`Cấp quyền “${permissionName}” cho ${subjectType === 'user' ? 'tài khoản' : subjectType === 'department' ? 'phòng ban' : 'chức vụ'} “${subjectName}” trên mục này?`)) return;
   try {
     await request(`/entries/${permissionEntryId}/permissions`, {
       method: 'POST',
@@ -1122,6 +1145,7 @@ function showRenameDialog(item) {
     event.preventDefault();
     const name = form.elements.name.value.trim();
     if (!name) return;
+    if (name !== item.name && !window.confirm(`Đổi tên “${item.name}” thành “${name}”?`)) return;
     try {
       await request(`/entries/${item.id}`, {
         method: 'PATCH',
@@ -1210,6 +1234,13 @@ async function pasteEntry(destination = current) {
   )) {
     toast('Không thể chuyển thư mục vào bên trong chính nó');
     return;
+  }
+  if (clipboard.operation === 'cut') {
+    const destinationName = destination
+      ? folders.find(folder => folder.id === destination)?.name || 'thư mục đã chọn'
+      : 'thư mục gốc';
+    const names = clipboard.items.map(item => `“${item.name}”`).join(', ');
+    if (!window.confirm(`Chuyển ${names} đến “${destinationName}”?`)) return;
   }
   let pasted = 0;
   try {
@@ -2215,6 +2246,7 @@ async function openDeviceDocumentPermissions(category) {
     const host = $('#device-department-options');
     host.replaceChildren();
     const selected = new Set(data.permissions[category] || []);
+    deviceDepartmentOriginal = [...selected];
     for (const department of data.departments) {
       const label = document.createElement('label');
       const checkbox = document.createElement('input');
@@ -2248,6 +2280,12 @@ $('#device-department-form').addEventListener('submit', async event => {
   if (!deviceDepartmentDeviceId || !deviceDepartmentCategory) return;
   const departments = [...$('#device-department-options').querySelectorAll('input:checked')]
     .map(input => input.value);
+  if (departments.length !== deviceDepartmentOriginal.length
+    || departments.some(department => !deviceDepartmentOriginal.includes(department))) {
+    const categoryName = catalogLabels.devices.categories[deviceDepartmentCategory];
+    const summary = departments.length ? departments.join(', ') : 'không phòng ban nào';
+    if (!window.confirm(`Lưu danh sách phòng ban được xem “${categoryName}”: ${summary}?`)) return;
+  }
   try {
     await request(
       `/catalog/devices/${deviceDepartmentDeviceId}/document-departments/${deviceDepartmentCategory}`,
@@ -2306,6 +2344,8 @@ async function uploadCatalogImages(input) {
 async function setCatalogAvatar(image) {
   if (!catalogDetail || !['solutions', 'devices'].includes(catalogKind)) return;
   const entityId = catalogDetail.id;
+  if (!image.is_avatar
+    && !window.confirm(`Đặt ảnh “${image.original_name}” làm ảnh đại diện cho ${catalogLabels[catalogKind].singular.toLocaleLowerCase('vi')} “${catalogDetail.name}”?`)) return;
   try {
     await request(`/catalog/${catalogKind}/${entityId}/images/${image.id}/avatar`, { method: 'PATCH' });
     await openCatalogDetail(entityId);
@@ -2362,6 +2402,16 @@ $('#catalog-object-form').addEventListener('submit', async event => {
     payload.model = form.elements.model.value.trim();
     payload.manufacturer = form.elements.manufacturer.value.trim();
   }
+  const previous = catalogDetail?.id === catalogObjectId
+    ? catalogDetail
+    : catalogItems.find(item => item.id === catalogObjectId);
+  const changed = Boolean(catalogObjectId && previous && (
+    previous.name !== payload.name
+    || (previous.description || '') !== payload.description
+    || (previous.model || '') !== (payload.model || '')
+    || (previous.manufacturer || '') !== (payload.manufacturer || '')
+  ));
+  if (changed && !window.confirm(`Lưu các thay đổi cho ${catalogLabels[catalogKind].singular.toLocaleLowerCase('vi')} “${previous.name}”?`)) return;
   try {
     const path = `/catalog/${catalogKind}${catalogObjectId ? `/${catalogObjectId}` : ''}`;
     const result = await request(path, {
