@@ -1022,6 +1022,10 @@ function openEntry(item) {
   else window.location.href = `${api}/entries/${item.id}/download`;
 }
 
+function isVideoPreviewable(name) {
+  return /\.(mp4|m4v|webm|ogv|ogg)$/i.test(name);
+}
+
 function openMobilePreview(item) {
   const url = `${api}/entries/${item.id}/preview`;
   const previewWindow = window.open('about:blank', '_blank');
@@ -1034,7 +1038,7 @@ function openMobilePreview(item) {
 }
 
 function isPreviewable(name) {
-  return /\.(pdf|docx?|odt|rtf|xlsx?|ods|pptx?|odp)$/i.test(name);
+  return isVideoPreviewable(name) || /\.(pdf|docx?|odt|rtf|xlsx?|ods|pptx?|odp)$/i.test(name);
 }
 
 async function openPreview(item) {
@@ -1044,11 +1048,31 @@ async function openPreview(item) {
   $('#preview-download').onclick = () => {
     window.location.href = `${api}/entries/${item.id}/download`;
   };
-  $('#preview-frame').hidden = true;
-  $('#preview-frame').removeAttribute('src');
+  const frame = $('#preview-frame');
+  frame.hidden = true;
+  frame.removeAttribute('src');
+  const video = $('#preview-video');
+  video.hidden = true;
+  video.removeAttribute('src');
+  video.load();
   $('#preview-loading').classList.remove('hidden');
   $('#preview-loading').textContent = 'Đang mở tài liệu…';
   $('#preview-dialog').showModal();
+  if (isVideoPreviewable(item.name)) {
+    const signal = previewController.signal;
+    video.onloadedmetadata = () => {
+      if (signal.aborted) return;
+      $('#preview-loading').classList.add('hidden');
+      video.hidden = false;
+    };
+    video.onerror = () => {
+      if (signal.aborted) return;
+      $('#preview-loading').textContent = 'Không thể phát video này. Hãy kiểm tra định dạng hoặc tải tệp xuống.';
+    };
+    video.src = `${api}/entries/${item.id}/preview`;
+    video.load();
+    return;
+  }
   try {
     const response = await fetch(`${api}/entries/${item.id}/preview`, {
       signal: previewController.signal
@@ -1061,7 +1085,6 @@ async function openPreview(item) {
     if (previewController.signal.aborted) return;
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
     previewObjectUrl = URL.createObjectURL(blob);
-    const frame = $('#preview-frame');
     frame.onload = () => {
       $('#preview-loading').classList.add('hidden');
       frame.hidden = false;
@@ -1077,6 +1100,10 @@ function closePreview() {
   previewController?.abort();
   previewController = null;
   $('#preview-frame').removeAttribute('src');
+  const video = $('#preview-video');
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
   if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
   previewObjectUrl = null;
   $('#preview-dialog').close();
@@ -2175,9 +2202,11 @@ function renderCatalogSection(title, items, removeHandler, related = false, onUp
     input.multiple = true;
     input.hidden = true;
     input.addEventListener('change', () => onUpload(input));
-    heading.title = `Bấm để tải tài liệu vào nhóm “${title}”`;
+    const uploadType = departmentCategory === 'installation' ? 'video hoặc tài liệu' : 'tài liệu';
+    heading.title = `Bấm để tải ${uploadType} vào nhóm “${title}”`;
     heading.onclick = () => input.click();
-    const uploadButton = makeCatalogButton('↑ Tải lên', () => input.click());
+    const uploadLabel = departmentCategory === 'installation' ? '↑ Tải video/tài liệu' : '↑ Tải lên';
+    const uploadButton = makeCatalogButton(uploadLabel, () => input.click());
     uploadButton.classList.add('catalog-upload-button');
     actions.append(uploadButton, input);
   }

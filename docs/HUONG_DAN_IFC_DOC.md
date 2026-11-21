@@ -67,7 +67,7 @@ Quản lý ACL cần quyền **Quản lý quyền** tại mục đó. Hãy xem x
 - Mở danh mục tương ứng, tìm kiếm và chọn mục để xem chi tiết.
 - Editor/Manager có thể thêm hoặc sửa thông tin. Với thiết bị, các trường gồm tên, model, nhà sản xuất và mô tả.
 - Trong Giải pháp, liên kết nhóm tài liệu kỹ thuật/trình bày và thiết bị liên quan.
-- Trong Thiết bị, liên kết Datasheet (TLKT), hướng dẫn lắp đặt và sử dụng, tài liệu pháp lý/đo kiểm, catalog; tải tối đa 20 ảnh mỗi lần, chọn ảnh đại diện.
+- Trong Thiết bị, liên kết Datasheet (TLKT), hướng dẫn lắp đặt và sử dụng, tài liệu pháp lý/đo kiểm, catalog. Có thể tải video lên nhóm hướng dẫn lắp đặt và sử dụng; bấm vào tệp để phát hoặc tua video ngay trên trình duyệt. Các định dạng video hỗ trợ xem gồm MP4, M4V, WebM, OGV và OGG; việc phát còn phụ thuộc codec mà trình duyệt hỗ trợ. Hạn mức dung lượng mỗi tệp áp dụng như các tài liệu khác. Tải tối đa 20 ảnh mỗi lần và chọn ảnh đại diện.
 - Manager có thể bấm **Phân quyền** cạnh nút **Tải lên** trong từng nhóm tài liệu Thiết bị để chọn nhiều phòng ban được xem. User ngoài các phòng ban được chọn không thể xem/tải file qua catalog hoặc các chức năng kho; quyền sửa/xóa của user được phép xem vẫn theo ACL file và Role. Bỏ chọn toàn bộ phòng ban sẽ bỏ giới hạn theo phòng ban.
 - Người dùng Role Manager trở lên có mục **Phòng ban / chức vụ** để thêm, sửa và xóa danh mục. Mục đang được tài khoản hoặc quyền truy cập sử dụng không thể xóa; đổi tên sẽ cập nhật các tài khoản và quyền liên quan.
 - Hệ thống khởi tạo một lần các phòng ban Ban Giám Đốc, Ban Kỹ thuật, Kinh Doanh, Dự án, Kế toán cùng chức vụ tương ứng; chức vụ chọn trong hồ sơ tài khoản được lọc theo phòng ban.

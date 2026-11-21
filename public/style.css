@@ -205,6 +205,7 @@ dialog h2{margin:0 0 16px;font-size:18px;font-weight:600}
 .preview-titlebar #preview-close:hover{background:#c42b1c;color:white}
 .preview-content{position:relative;flex:1;min-height:0;background:#555}
 #preview-frame{width:100%;height:100%;border:0;background:#fff}
+#preview-video{width:100%;height:100%;background:#111}
 .preview-loading{position:absolute;inset:0;display:grid;place-items:center;padding:24px;background:#fff;color:#555;text-align:center}
 .device-image-lightbox{position:relative;width:min(1100px,96vw);max-width:96vw;max-height:94vh;overflow:hidden;padding:42px 12px 10px;border:1px solid #444;border-radius:8px;background:#151515;color:#fff}
 .device-image-lightbox:not([open]){display:none}

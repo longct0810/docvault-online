@@ -245,6 +245,19 @@ router.get('/entries/:id/preview',async(req,res,next)=>{
   const ext=path.extname(file.name).toLowerCase();
   const source=path.join(root,file.disk_name);
   if(!fs.existsSync(source))return res.sendStatus(404);
+  const videoMimeTypes=new Map([
+    ['.mp4','video/mp4'],
+    ['.m4v','video/mp4'],
+    ['.webm','video/webm'],
+    ['.ogv','video/ogg'],
+    ['.ogg','video/ogg']
+  ]);
+  if(videoMimeTypes.has(ext)){
+    res.type(videoMimeTypes.get(ext));
+    res.setHeader('Content-Disposition','inline');
+    res.setHeader('Cache-Control','private, no-store');
+    return res.sendFile(source);
+  }
   if(ext==='.pdf'){
     res.type('application/pdf');
     res.setHeader('Content-Disposition','inline; filename="preview.pdf"');

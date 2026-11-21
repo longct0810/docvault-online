@@ -19,12 +19,14 @@
 - Tra cứu danh mục theo hai nhánh độc lập **Giải pháp** và **Thiết bị**. Mỗi giải pháp liên kết được với tài liệu kỹ thuật, slide và thiết bị; mỗi thiết bị có Datasheet (TLKT), hướng dẫn lắp đặt và sử dụng, tài liệu pháp lý/đo kiểm, catalog và danh sách giải pháp sử dụng.
 - Editor và Manager quản lý thông tin Giải pháp/Thiết bị và các liên kết danh mục; chỉ Manager mới xóa. Tài liệu được tham chiếu từ kho IFC_Doc hiện có, không tạo bản sao; quyền xem/tải tài liệu tuân theo mặc định và ACL của kho.
 - Từ trang chi tiết Giải pháp/Thiết bị, Editor và Manager có thể bấm vào tên nhóm tài liệu hoặc **Tải lên** để tải nhiều tệp và lưu trực tiếp vào đúng nhóm tài liệu.
+- Nhóm **Hướng dẫn lắp đặt và sử dụng** của Thiết bị nhận video cùng tài liệu; bấm vào video để phát và tua ngay trên trình duyệt. Hỗ trợ xem MP4, M4V, WebM, OGV và OGG tùy codec trình duyệt; video tuân theo giới hạn `MAX_FILE_SIZE_MB`.
 - Manager có thể đặt giới hạn phòng ban được xem cho từng nhóm tài liệu của Thiết bị ngay cạnh nút **Tải lên**. Khi đã chọn phòng ban, các user ngoài danh sách không thấy hoặc truy cập được file của nhóm đó qua catalog, tìm kiếm, xem trước hay tải xuống; quyền Xem/Sửa/Xóa của user trong phòng ban vẫn theo ACL file và Role Viewer/Editor/Manager. Không chọn phòng ban nào thì không giới hạn theo phòng ban.
 - Giải pháp và Thiết bị hỗ trợ tải nhiều ảnh, chọn ảnh đại diện và tự chọn ảnh khác làm đại diện khi ảnh hiện tại bị xóa; ảnh đại diện hiển thị trong danh sách và sơ đồ liên kết. Mỗi lần tải tối đa 20 ảnh, giới hạn 15 MB/ảnh hoặc theo `MAX_FILE_SIZE_MB` nếu thấp hơn.
 - Tên tệp có dấu tiếng Việt được giải mã đúng khi tải lên từ Explorer hoặc danh mục; tên ảnh được lưu và hiển thị đúng trong thư viện ảnh.
 - Role được kiểm tra cả trên giao diện và API. Viewer chỉ xem ngoài thư mục cá nhân; Editor được tạo/sửa danh mục và thao tác tệp trong thư mục được cấp quyền sửa; Manager có thể xóa trong phạm vi được cấp quyền. Mọi tài khoản có toàn quyền với thư mục cá nhân của mình.
 - Giao diện desktop mô phỏng Windows 11 trong trình duyệt, có Start/taskbar, cửa sổ Explorer, tìm kiếm toàn bộ IFC_Doc và ngăn chi tiết.
 - Xem PDF trực tiếp; tài liệu Word, Excel, PowerPoint và OpenDocument được chuyển cục bộ sang PDF bằng LibreOffice để xem trong Explorer. Việc chuyển đổi diễn ra trên máy chủ của IFC_Doc, không gửi tài liệu tới dịch vụ xem trước bên ngoài.
+- Xem video MP4, M4V, WebM, OGV và OGG trực tiếp trong trình duyệt với khả năng tua; video không được chuyển mã, vì vậy khả năng phát tùy thuộc codec trình duyệt.
 - Giới hạn dung lượng file cấu hình bằng `MAX_FILE_SIZE_MB`.
 - Chạy ứng dụng bằng PM2; PostgreSQL có thể chạy bằng Docker Compose. Dữ liệu file nằm trong `storage/`.
 
